@@ -8,7 +8,7 @@ It was needed to play raw H264 and AAC data coming from live streaming encapsula
 
 Live Demo
 -------
-[Click here](https://samirkumardas.github.io/jmuxer/index.html) to view a working demo
+[Click here](https://samirkumardas.github.io/jmuxer/) to view a working demo
 
 
 How to use?
