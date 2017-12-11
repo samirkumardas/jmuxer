@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="description" content="jMuxer - a simple javascript mp4 muxer for non-standard streaming communications protocol">
+    <meta name="keywords" content="h264 player, mp4 player, mse, mp4 muxing, jmuxer, aac player">
+    <title>JMuxer demo</title>
+</head>
+<body>
+<div id="container" style="width: 400px; margin: 0 auto;">
+    <video width="400" controls autoplay poster="images/loader-thumb.jpg" id="player"></video>
+</div>
+<script>
+
+  function parse(data) {
+      var input = new Uint8Array(data),
+          dv = new DataView(input.buffer),
+          duration,
+          audioLength,
+          audio,
+          video;
+
+      duration = dv.getUint16(0, true);
+      audioLength = dv.getUint16(2, true);
+      audio = input.subarray(4, (audioLength + 4));
+      video = input.subarray(audioLength + 4);
+
+      return {
+        audio: audio,
+        video: video,
+        duration: duration
+      };
+ }
+
+ window.onload = function() {
+    var socketURL = 'ws://localhost:8080';
+    var jmuxer = new JMuxer({
+        node: 'player',
+        debug: true
+     });
+
+     var ws = new WebSocket(socketURL);
+     ws.binaryType = 'arraybuffer';
+     ws.addEventListener('message',function(event) {
+          var data = parse(event.data);
+          jmuxer.feed(data);
+     });
+ }   
+</script>
+<script type="text/javascript" src="../dist/jmuxer.min.js"></script>
+</body>
+</html>
