@@ -40,10 +40,11 @@ export class H264Remuxer extends BaseRemuxer {
             units,
             unit,
             size,
-            keyFrame = false;
+            keyFrame;
         for (sample of samples) {
             units = [];
             size = 0;
+            keyFrame = false;
             for (unit of sample.units) {
                 if (this.h264.parseNAL(unit)) {
                     units.push(unit);

@@ -9,6 +9,20 @@
     "pro": "NODE_ENV=production rollup -c",
     "test": "karma start karma.conf.js"
   },
+  "keywords": [
+    "h264",
+    "raw h264",
+    "aac",
+    "muxer",
+    "mse",
+    "adts",
+    "player",
+    "html5",
+    "mp4",
+    "rtsp",
+    "hls",
+    "jmuxer"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/samirkumardas/jmuxer.git"
