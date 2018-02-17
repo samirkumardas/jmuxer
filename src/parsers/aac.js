@@ -75,7 +75,6 @@ export class AACParser {
         this.track.codec = 'mp4a.40.' + objectType;
         this.track.channelCount = channelCount;
         this.track.config = config;
-        this.track.timescale = AACParser.samplingRateMap[sampleIndex];
         this.remuxer.readyToDecode = true;
     }
 }

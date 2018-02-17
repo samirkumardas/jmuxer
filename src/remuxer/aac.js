@@ -52,7 +52,6 @@ export class AACRemuxer extends BaseRemuxer {
             this.mp4track.len += size;
             if (!this.readyToDecode) {
                 this.aac.setAACConfig();
-                this.scaleFactor = this.mp4track.timescale / this.timescale;
             }
         }
     }
@@ -74,7 +73,7 @@ export class AACRemuxer extends BaseRemuxer {
             let sample = this.samples.shift(),
                 units = sample.units;
 
-            duration = sample.duration * this.scaleFactor;
+            duration = sample.duration;
 
             if (duration <= 0) {
                 debug.log(`remuxer: invalid sample duration at DTS: ${this.nextDts} :${duration}`);
