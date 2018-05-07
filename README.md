@@ -116,6 +116,10 @@ A distribution version is available inside *dist* directory. However, if you nee
  3. npm install
  4. npm run build OR npm run pro
  
+ 
+**Caveats**
+It currently supports H264 base profile only. 
+ 
 Credits
 -----------
 Proudly inspired by [hls.js](https://github.com/video-dev/hls.js), [rtsp player](https://github.com/Streamedian/html5_rtsp_player) :) 
