@@ -102,7 +102,7 @@ export default class JMuxmer extends Event {
             }
         }
         if (!remux) {
-            debug.error('No video element found to feed. Input object must have audio and/or video property');
+            debug.error('Input object must have audio and/or video property. Make sure it is not empty and valid typed array');
             return;
         }
         this.remuxController.remux(chunks);
