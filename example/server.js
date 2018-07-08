@@ -35,6 +35,13 @@ function openSocket() {
           if (interval) {
               clearInterval(interval);
           }
+          ws.on('error', function error(error) {
+              console.log('WebSocket error');
+          });
+          ws.on('close', function close(msg) {
+              console.log('WebSocket close');
+          });
+
           interval = setInterval(function() {
             sendChunk();
           }, 1800);
@@ -50,7 +57,11 @@ function sendChunk() {
     wss.clients.forEach(function each(client) {
         if (client.readyState === WebSocket.OPEN) {
             anyOneThere = true;
-            client.send(chunk);
+            try {
+                client.send(chunk);
+            } catch(e) {
+               console.log(`Sending failed:`, e); 
+            }
             if (current % 50 == 0){
                  console.log(`I am serving, no problem!`);
             }

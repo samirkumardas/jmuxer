@@ -45,8 +45,13 @@
           var data = parse(event.data);
           jmuxer.feed(data);
      });
- }   
+
+     ws.addEventListener('error', function(e) {
+        console.log('Socket Error');
+     });
+ }
+ 
 </script>
-<script type="text/javascript" src="../dist/jmuxer.min.js"></script>
+<script type="text/javascript" src="jmuxer.min.js"></script>
 </body>
 </html>
