@@ -103,6 +103,7 @@ A simple node server with demo media data is available on example directory. Eac
 Demo files are avaiable in example directory. For running the example, first run the node server by following command:
 
 *cd example*
+
 *node server.js*
 
 then, visit *example/index.html* page using any webserver.
