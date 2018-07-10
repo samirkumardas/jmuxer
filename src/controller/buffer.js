@@ -11,7 +11,6 @@ export default class BufferController extends Event {
 
         this.cleaning = false;
         this.pendingCleaning = 0;
-        this.safeBufferCleanTime = 0;
         this.cleanOffset = 2;
         this.cleanRanges = [];
 
