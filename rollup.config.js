@@ -7,7 +7,7 @@ import uglify from 'rollup-plugin-uglify';
 export default {
     input: 'src/jmuxer.js',
     output: {
-        file: 'example/jmuxer.min.js',
+        file: 'dist/jmuxer.min.js',
         format: 'iife',
         name: 'JMuxer',
         sourcemap: false, //inline
