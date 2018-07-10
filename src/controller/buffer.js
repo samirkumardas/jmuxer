@@ -11,6 +11,7 @@ export default class BufferController extends Event {
 
         this.cleaning = false;
         this.pendingCleaning = 0;
+        this.safeBufferCleanTime = 0;
         this.cleanOffset = 2;
         this.cleanRanges = [];
 
@@ -49,9 +50,9 @@ export default class BufferController extends Event {
         this.sourceBuffer.remove(range[0], range[1]);
     }
 
-    initCleanup(currentTime) {
+    initCleanup(cleanMaxLimit) {
         if (this.sourceBuffer.updating) {
-            this.pendingCleaning = currentTime;
+            this.pendingCleaning = cleanMaxLimit;
             return;
         }
         if (this.sourceBuffer.buffered && this.sourceBuffer.buffered.length && !this.cleaning) {
@@ -59,8 +60,8 @@ export default class BufferController extends Event {
                 let start = this.sourceBuffer.buffered.start(i);
                 let end = this.sourceBuffer.buffered.end(i);
 
-                if ((currentTime - start) > this.cleanOffset) {
-                    end = currentTime - this.cleanOffset;
+                if ((cleanMaxLimit - start) > this.cleanOffset) {
+                    end = cleanMaxLimit - this.cleanOffset;
                     if (start < end) {
                         this.cleanRanges.push([start, end]);
                     }

@@ -17,6 +17,8 @@ window.onload = function() {
     var jmuxer = new JMuxer({
         node: 'player',
         mode: 'video',
+        flushingTime: 1000,
+        fps: 30,
         debug: true
      });
 

@@ -57,6 +57,8 @@ export default class JMuxmer extends Event {
 
         this.mseReady = false;
         this.lastCleaningTime = Date.now();
+        this.keyframeCache = [];
+        this.frameCounter  = 0;
 
         /* events callback */
         this.remuxController.on('buffer', this.onBuffer.bind(this));
@@ -84,9 +86,7 @@ export default class JMuxmer extends Event {
             };
 
         if (!data) return;
-        
         duration = data.duration ? parseInt(data.duration) : 0;
-
         if (data.video) {  
             nalus = H264Parser.extractNALu(data.video);
             if (nalus.length > 0) {
@@ -102,7 +102,7 @@ export default class JMuxmer extends Event {
             }
         }
         if (!remux) {
-            debug.error('Input object must have audio and/or video property. Make sure it is not empty and valid typed array');
+            debug.error('Input object must have video and/or audio property. Make sure it is not empty and valid typed array');
             return;
         }
         this.remuxController.remux(chunks);
@@ -114,7 +114,8 @@ export default class JMuxmer extends Event {
             samples = [],
             naluObj,
             sampleDuration,
-            adjustDuration = 0;
+            adjustDuration = 0,
+            numberOfFrames = [];
 
         for (nalu of nalus) {
             naluObj = new NALU(nalu);
@@ -122,6 +123,12 @@ export default class JMuxmer extends Event {
             if (naluObj.type() === NALU.IDR || naluObj.type() === NALU.NDR) {
                 samples.push({units});
                 units = [];
+                if (this.options.clearBuffer) {
+                    if (naluObj.type() === NALU.IDR) {
+                        numberOfFrames.push(this.frameCounter);
+                    }
+                    this.frameCounter++;
+                }
             }
         }
         
@@ -137,6 +144,14 @@ export default class JMuxmer extends Event {
                 adjustDuration--;
             }
         });
+
+        /* cache keyframe times if clearBuffer set true */
+        if (this.options.clearBuffer) {
+            numberOfFrames = numberOfFrames.map((total) => {
+                return (total * sampleDuration) / 1000;
+            });
+            this.keyframeCache = this.keyframeCache.concat(numberOfFrames);
+        }
         return samples;
     }
 
@@ -220,17 +235,37 @@ export default class JMuxmer extends Event {
         }
     }
 
+    getSafeBufferClearLimit(offset) {
+        let maxLimit = offset,
+            adjacentOffset;
+
+        for (let i = 0; i < this.keyframeCache.length; i++) {
+            if (this.keyframeCache[i] >= offset) {
+                break;
+            }
+            adjacentOffset = this.keyframeCache[i];
+        }
+ 
+        this.keyframeCache = this.keyframeCache.filter( keyframePoint => {
+            if (keyframePoint < adjacentOffset) {
+                maxLimit = keyframePoint;
+            }
+            return keyframePoint >= adjacentOffset;
+        });
+        return maxLimit;
+    }
+
     clearBuffer() {
         if (this.options.clearBuffer && (Date.now() - this.lastCleaningTime) > 10000) {
             for (let type in this.bufferControllers) {
-                this.bufferControllers[type].initCleanup(this.node.currentTime);
+                let cleanMaxLimit = this.getSafeBufferClearLimit(this.node.currentTime);
+                this.bufferControllers[type].initCleanup(cleanMaxLimit);
             }
             this.lastCleaningTime = Date.now();
         }
     }
 
     onBuffer(data) {
-
         if (this.bufferControllers && this.bufferControllers[data.type]) {
             this.bufferControllers[data.type].feed(data.payload);
         }
