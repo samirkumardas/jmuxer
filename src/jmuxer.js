@@ -188,10 +188,13 @@ export default class JMuxmer extends Event {
                 for (let sb of sbs) {
                     this.mediaSource.removeSourceBuffer(sb);
                 }
-                this.mediaSource.endOfStream();
+                if (this.bufferControllers) {
+                    this.mediaSource.endOfStream();
+                }
             } catch (e) {
                 debug.error(`mediasource is not available to end ${e.message}`);
             }
+            this.mediaSource = null;
         }
         if (this.remuxController) {
             this.remuxController.destroy();
