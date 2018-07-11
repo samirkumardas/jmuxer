@@ -108,6 +108,17 @@ Demo files are avaiable in example directory. For running the example, first run
 
 then, visit *example/index.html* page using any webserver.
 
+
+**Player Example of raw h264 only**
+
+Assuming you are still on `example` directory. Now run followngs:
+
+*node server-h264.js*
+
+then, visit *example/index-h264.html* page using any webserver.
+
+
+
 **How to build?**
 
 A distribution version is available inside *dist* directory. However, if you need to build, you can do as follows:
