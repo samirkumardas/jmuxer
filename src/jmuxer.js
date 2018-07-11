@@ -184,15 +184,26 @@ export default class JMuxmer extends Event {
         this.stopInterval();
         if (this.mediaSource) {
             try {
+                let sbs = this.mediaSource.sourceBuffers;
+                for (let sb of sbs) {
+                    this.mediaSource.removeSourceBuffer(sb);
+                }
                 this.mediaSource.endOfStream();
             } catch (e) {
-                debug.error('mediasource is not available to end');
+                debug.error(`mediasource is not available to end ${e.message}`);
             }
         }
         if (this.remuxController) {
             this.remuxController.destroy();
             this.remuxController = null;
         }
+        if (this.bufferControllers) {
+            for (let type in this.bufferControllers) {
+                this.bufferControllers[type].destroy();
+            }
+            this.bufferControllers = null;
+        }
+        this.node = false;
         this.mseReady = false;
         this.videoStarted = false;
     }

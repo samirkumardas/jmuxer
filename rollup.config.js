@@ -6,12 +6,20 @@ import uglify from 'rollup-plugin-uglify';
 
 export default {
     input: 'src/jmuxer.js',
-    output: {
-        file: 'dist/jmuxer.min.js',
-        format: 'iife',
-        name: 'JMuxer',
-        sourcemap: false, //inline
-    },
+    output: [
+        {
+            file: 'example/jmuxer.min.js',
+            format: 'iife',
+            name: 'JMuxer',
+            sourcemap: false // 'inline'
+        },
+        {
+            file: 'dist/jmuxer.min.js',
+            format: 'iife',
+            name: 'JMuxer',
+            sourcemap: false
+        }
+    ],
     plugins: [
         eslint(),
         babel({
