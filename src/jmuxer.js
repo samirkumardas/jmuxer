@@ -23,6 +23,7 @@ export default class JMuxmer extends Event {
             mode: 'both', // both, audio, video
             flushingTime: 1500,
             clearBuffer: true,
+            onReady: null, // function called when MSE is ready to accept frames
             fps: 30,
             debug: false
         };
@@ -212,7 +213,7 @@ export default class JMuxmer extends Event {
     }
 
     createBuffer() {
-        if (!this.mseReady || !this.remuxController.isReady() || this.bufferControllers) return;
+        if (!this.mseReady || !this.remuxController || !this.remuxController.isReady() || this.bufferControllers) return;
         this.bufferControllers = {};
         for (let type in this.remuxController.tracks) {
             let track = this.remuxController.tracks[type];
@@ -288,6 +289,10 @@ export default class JMuxmer extends Event {
     /* Events on MSE */
     onMSEOpen() {
         this.mseReady = true;
+        if (typeof this.options.onReady === "function") {
+            this.options.onReady();
+            this.options.onReady = null;
+        }
         this.createBuffer();
     }
 
