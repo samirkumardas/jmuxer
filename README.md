@@ -120,7 +120,8 @@ then, visit *example/index-h264.html* page using any webserver.
 
 
 
-**How to build?**
+How to build?
+---------
 
 A distribution version is available inside *dist* directory. However, if you need to build, you can do as follows:
 
