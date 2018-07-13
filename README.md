@@ -109,7 +109,8 @@ Demo files are avaiable in example directory. For running the example, first run
 then, visit *example/index.html* page using any webserver.
 
 
-**Player Example of raw h264 only**
+Player Example for raw h264 only
+-----------
 
 Assuming you are still on `example` directory. Now run followngs:
 
