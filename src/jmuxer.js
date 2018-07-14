@@ -246,7 +246,7 @@ export default class JMuxmer extends Event {
     }
 
     getSafeBufferClearLimit(offset) {
-        let maxLimit = offset,
+        let maxLimit = (this.options.mode === 'audio' && offset) || 0,
             adjacentOffset;
 
         for (let i = 0; i < this.keyframeCache.length; i++) {
@@ -255,18 +255,21 @@ export default class JMuxmer extends Event {
             }
             adjacentOffset = this.keyframeCache[i];
         }
- 
-        this.keyframeCache = this.keyframeCache.filter( keyframePoint => {
-            if (keyframePoint < adjacentOffset) {
-                maxLimit = keyframePoint;
-            }
-            return keyframePoint >= adjacentOffset;
-        });
+
+        if (adjacentOffset) {
+            this.keyframeCache = this.keyframeCache.filter( keyframePoint => {
+                if (keyframePoint < adjacentOffset) {
+                    maxLimit = keyframePoint;
+                }
+                return keyframePoint >= adjacentOffset;
+            });
+        }
+        
         return maxLimit;
     }
 
     clearBuffer() {
-        if (this.options.clearBuffer && (Date.now() - this.lastCleaningTime) > 10000) {
+        if (this.options.clearBuffer && (Date.now() - this.lastCleaningTime) > 1000) {
             for (let type in this.bufferControllers) {
                 let cleanMaxLimit = this.getSafeBufferClearLimit(this.node.currentTime);
                 this.bufferControllers[type].initCleanup(cleanMaxLimit);
