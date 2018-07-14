@@ -85,7 +85,7 @@ export default class JMuxmer extends Event {
                 audio: []
             };
 
-        if (!data) return;
+        if (!data || !this.remuxController) return;
         duration = data.duration ? parseInt(data.duration) : 0;
         if (data.video) {  
             nalus = H264Parser.extractNALu(data.video);
@@ -184,10 +184,6 @@ export default class JMuxmer extends Event {
         this.stopInterval();
         if (this.mediaSource) {
             try {
-                let sbs = this.mediaSource.sourceBuffers;
-                for (let sb of sbs) {
-                    this.mediaSource.removeSourceBuffer(sb);
-                }
                 if (this.bufferControllers) {
                     this.mediaSource.endOfStream();
                 }
