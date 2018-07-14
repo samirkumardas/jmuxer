@@ -34,6 +34,8 @@ Available options are:
 
 *fps* - Optional value. Frame rate of the video if it is known/fixed value. It will be used to find frame duration if chunk duration is not available with provided media data. 
 
+*onReady* - function. Will be called once MSE is ready.
+
 *debug* - true/false. Will print debug log in browser console. Default is false.
 
 **Complete example:**

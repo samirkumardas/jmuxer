@@ -288,7 +288,7 @@ export default class JMuxmer extends Event {
     /* Events on MSE */
     onMSEOpen() {
         this.mseReady = true;
-        if (typeof this.options.onReady === "function") {
+        if (typeof this.options.onReady === 'function') {
             this.options.onReady();
             this.options.onReady = null;
         }
