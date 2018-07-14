@@ -7,6 +7,7 @@
     "build": "rollup -c",
     "dev": "rollup -c --watch",
     "pro": "NODE_ENV=production rollup -c",
+    "lint": "eslint  -c .eslintrc.json ./src/",
     "test": "karma start karma.conf.js"
   },
   "keywords": [

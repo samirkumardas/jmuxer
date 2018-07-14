@@ -32,7 +32,7 @@ export class ExpGolomb {
 
     getBits(size, offsetBits, moveIndex = true) {
         if (this.bitsAvailable < size) {
-           //throw new Error('no bytes available');
+            //throw new Error('no bytes available');
             return 0;
         }
         const offset = offsetBits % 8;

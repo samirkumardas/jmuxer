@@ -368,11 +368,11 @@ export class MP4 {
             0x00, 0x00, 0x00, // compressorname
             0x00, 0x18,   // depth = 24
             0x11, 0x11]), // pre_defined = -1
-            avcc,
-            MP4.box(MP4.types.btrt, new Uint8Array([
-                0x00, 0x1c, 0x9c, 0x80, // bufferSizeDB
-                0x00, 0x2d, 0xc6, 0xc0, // maxBitrate
-                0x00, 0x2d, 0xc6, 0xc0])) // avgBitrate
+        avcc,
+        MP4.box(MP4.types.btrt, new Uint8Array([
+            0x00, 0x1c, 0x9c, 0x80, // bufferSizeDB
+            0x00, 0x2d, 0xc6, 0xc0, // maxBitrate
+            0x00, 0x2d, 0xc6, 0xc0])) // avgBitrate
         );
     }
 
@@ -438,7 +438,7 @@ export class MP4 {
             (audiosamplerate >> 8) & 0xFF,
             audiosamplerate & 0xff, //
             0x00, 0x00]),
-            MP4.box(MP4.types.esds, MP4.esds(track)));
+        MP4.box(MP4.types.esds, MP4.esds(track)));
     }
 
     static stsd(track) {

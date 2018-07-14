@@ -53,7 +53,7 @@ export class H264Parser {
         return result;
     }
 
-     /**
+    /**
      * Advance the ExpGolomb decoder past a scaling list. The scaling
      * list is optionally transmitted as part of a sequence parameter
      * set and is not relevant to transmuxing.
