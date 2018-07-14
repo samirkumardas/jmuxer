@@ -270,7 +270,7 @@ export default class JMuxmer extends Event {
     }
 
     clearBuffer() {
-        if (this.options.clearBuffer && (Date.now() - this.lastCleaningTime) > 1000) {
+        if (this.options.clearBuffer && (Date.now() - this.lastCleaningTime) > 10000) {
             for (let type in this.bufferControllers) {
                 let cleanMaxLimit = this.getSafeBufferClearLimit(this.node.currentTime);
                 this.bufferControllers[type].initCleanup(cleanMaxLimit);
