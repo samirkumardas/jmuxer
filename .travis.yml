@@ -1,12 +1,15 @@
+sudo: required
 language: node_js
 os:
   - osx
 node_js:
   - '10'
-before_install:
- - export DISPLAY=:99.0
- - sh -e /etc/init.d/xvfb start
- - sleep 3 # give xvfb some time to start
+addons:
+  - chrome: stable
+before_script:
+  - export DISPLAY=:99.0
+  - sh -e /etc/init.d/xvfb start
+  - sleep 3
 script:
   - npm run lint
   - npm test
