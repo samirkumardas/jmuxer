@@ -56,6 +56,7 @@ Available options are:
    <script>
        var jmuxer = new JMuxer({
            node: 'player',
+           mode: 'both', /* available values are: both, audio and video */
            debug: false
        });
 
