@@ -71,6 +71,23 @@ Available options are:
 
 ```
 
+**ES6 Example:**
+
+Install module through `npm`
+
+npm install --save jmuxer
+
+```
+
+import JMuxer from 'jmuxer';
+
+const jmuxer = new JMuxer({
+              node: 'player',
+              debug: true
+            });
+
+```
+
 Media dataObject may have folloiwng properties:
 
 *video* - h264 buffer 
