@@ -70,12 +70,19 @@ Available options are:
    </script>
 
 ```
+Media dataObject may have folloiwng properties:
+
+*video* - h264 buffer 
+
+*audio* - AAC buffer
+
+*duration* - duration in miliseconds of the provided chunk. If duration is not provided, it will calculate frame duration wtih the provided frame rate (fps).
 
 **ES6 Example:**
 
 Install module through `npm`
 
-npm install --save jmuxer
+    npm install --save jmuxer
 
 ```
 
@@ -87,14 +94,6 @@ const jmuxer = new JMuxer({
             });
 
 ```
-
-Media dataObject may have folloiwng properties:
-
-*video* - h264 buffer 
-
-*audio* - AAC buffer
-
-*duration* - duration in miliseconds of the provided chunk. If duration is not provided, it will calculate frame duration wtih the provided frame rate (fps).
 
 
 **Available Methods**
