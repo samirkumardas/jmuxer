@@ -15,7 +15,7 @@ export default {
         },
         {
             file: 'dist/jmuxer.min.js',
-            format: 'iife',
+            format: 'umd',
             name: 'JMuxer',
             sourcemap: false
         }
