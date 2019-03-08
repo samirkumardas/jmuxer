@@ -2,9 +2,6 @@
 ![Maintenance](https://img.shields.io/maintenance/yes/2018.svg)
 ![license](https://img.shields.io/github/license/mashape/apistatus.svg)
 
-
-
-
 jMuxer
 -------
 jMuxer - a simple javascript mp4 muxer for non-standard streaming communications protocol. Basically it does not care about communication protocol and it is simply a javscript mp4 remuxer intended to pay media file in the browser using media source extension. It expects raw H264 video data and AAC audio data in ADTS container as an input.
@@ -17,10 +14,8 @@ Live Demo
 -------
 [Click here](https://samirkumardas.github.io/jmuxer/) to view a working demo
 
-
 How to use?
 -------
-
    a distribution version is available on dist folder.
    
 ```html
@@ -102,7 +97,6 @@ const jmuxer = new JMuxer({
 
 ```
 
-
 **Available Methods**
 
 | Name        | Parameter           | Remark  |
@@ -129,11 +123,21 @@ A simple node server with demo media data is available on example directory. Eac
 
 **Packet format**
 
-![alt text](packet-format.png "Packet format")
+|   2 bytes   |     2 bytes     |                |                 |
+|-------------|-----------------|----------------|-----------------|
+|Duration (ms)|Audio Data Length|Audio Data (AAC)|Video Data (H264)|
+
+A steps guideline to obtain above format from your file:
+1. Spliting video into 2 seconds chunks: `ffmpeg -i input.mp4 -c copy -map 0 -segment_time 2 -f segment %03d.mp4`
+1. Extracting h264 for all chunks: `for f in *.mp4; do ffmpeg -i "$f" -vcodec copy -an -bsf:v h264_mp4toannexb "${f:0:3}.h264"; done`
+1. Extracting audio for all chunks: `for f in *.mp4; do ffmpeg -i "$f" -acodec copy -vn "${f:0:3}.aac"; done`
+1. Extracting duration of a chunk e.g 1.mp4: `ffprobe 1.mp4 -show_format 2>&1 | sed -n 's/duration=//p'`
+
+(see https://github.com/samirkumardas/jmuxer/issues/20#issuecomment-470855007)
 
 **How to run example?**
 
-Demo files are avaiable in example directory. For running the example, first run the node server by following command:
+Demo files are available in example directory. For running the example, first run the node server by following command:
 
 *cd example*
 
@@ -141,17 +145,13 @@ Demo files are avaiable in example directory. For running the example, first run
 
 then, visit *example/index.html* page using any webserver.
 
-
 Player Example for raw h264 only
 -----------
-
 Assuming you are still on `example` directory. Now run followngs:
 
 *node server-h264.js*
 
 then, visit *example/index-h264.html* page using any webserver.
-
-
 
 How to build?
 ---------
@@ -162,8 +162,7 @@ A distribution version is available inside *dist* directory. However, if you nee
  2. cd jmuxer
  3. npm install
  4. npm run build OR npm run pro
- 
- 
+
 Credits
 -----------
 Proudly inspired by [hls.js](https://github.com/video-dev/hls.js), [rtsp player](https://github.com/Streamedian/html5_rtsp_player) :) 
