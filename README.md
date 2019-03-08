@@ -131,7 +131,7 @@ A steps guideline to obtain above format from your file:
 1. Spliting video into 2 seconds chunks: `ffmpeg -i input.mp4 -c copy -map 0 -segment_time 2 -f segment %03d.mp4`
 1. Extracting h264 for all chunks: `for f in *.mp4; do ffmpeg -i "$f" -vcodec copy -an -bsf:v h264_mp4toannexb "${f:0:3}.h264"; done`
 1. Extracting audio for all chunks: `for f in *.mp4; do ffmpeg -i "$f" -acodec copy -vn "${f:0:3}.aac"; done`
-1. Extracting duration of a chunk e.g 1.mp4: `ffprobe 1.mp4 -show_format 2>&1 | sed -n 's/duration=//p'`
+1. Extracting duration for all chunks: `for f in *.mp4; do ffprobe "$f" -show_format 2>&1 | sed -n 's/duration=//p'; done`
 
 (see https://github.com/samirkumardas/jmuxer/issues/20#issuecomment-470855007)
 
