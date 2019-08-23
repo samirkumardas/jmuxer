@@ -32,7 +32,7 @@
   "devDependencies": {
     "babel-plugin-external-helpers": "^6.22.0",
     "babel-preset-es2015": "^6.24.1",
-    "karma": "^3.0.0",
+    "karma": "^4.2.0",
     "karma-chrome-launcher": "^2.2.0",
     "karma-mocha": "^1.3.0",
     "karma-rollup-preprocessor": "^5.0.1",
