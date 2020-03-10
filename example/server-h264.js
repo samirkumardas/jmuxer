@@ -12,7 +12,7 @@ let naluPerChunk = 30,
 function extractChunks(buffer) {
     let i = 0,
         length = buffer.byteLength,
-        nuluCount = 0,
+        naluCount = 0,
         value,
         state = 0,
         result = [];
@@ -38,10 +38,10 @@ function extractChunks(buffer) {
                 if (value === 0) {
                     state = 3;
                 } else if (value === 1 && i < length) {
-                    nuluCount++;
-                    if (nuluCount === naluPerChunk) {
+                    naluCount++;
+                    if (naluCount === naluPerChunk) {
                         result.push(i);
-                        nuluCount = 0;
+                        naluCount = 0;
                     }
                     state = 0;
                 } else {
