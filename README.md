@@ -26,7 +26,7 @@ How to use?
 
 Available options are:
 
-*node* - String. ID of video tag. Required field.   
+*node* - String ID of a video tag / Reference of the HTMLVideoElement. Required field.   
 
 *mode* - Available values are: both, video and audio. Default is both
 
