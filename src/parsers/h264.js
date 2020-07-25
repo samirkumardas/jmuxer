@@ -218,7 +218,13 @@ export class H264Parser {
             height: ((2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16) - ((frameMbsOnlyFlag ? 2 : 4) * (frameCropTopOffset + frameCropBottomOffset)),
         };
     }
-
+    static parseHeader(unit) {
+        let decoder = new ExpGolomb(unit.getPayload());
+        // skip NALu type
+        decoder.readUByte();
+        unit.isfmb = decoder.readUEG() === 0;
+        unit.stype = decoder.readUEG();
+    }
     constructor(remuxer) {
         this.remuxer = remuxer;
         this.track = remuxer.mp4track;
@@ -251,15 +257,13 @@ export class H264Parser {
 
         let push = false;
         switch (unit.type()) {
-            case NALU.NDR:
-                push = true;
-                break;
             case NALU.IDR:
+            case NALU.NDR:
                 push = true;
                 break;
             case NALU.PPS:
                 if (!this.track.pps) {
-                    this.parsePPS(unit.getData().subarray(4));
+                    this.parsePPS(unit.getPayload());
                     if (!this.remuxer.readyToDecode && this.track.pps && this.track.sps) {
                         this.remuxer.readyToDecode = true;
                     }
@@ -268,7 +272,7 @@ export class H264Parser {
                 break;
             case NALU.SPS:
                 if (!this.track.sps) {
-                    this.parseSPS(unit.getData().subarray(4));
+                    this.parseSPS(unit.getPayload());
                     if (!this.remuxer.readyToDecode && this.track.pps && this.track.sps) {
                         this.remuxer.readyToDecode = true;
                     }
@@ -276,10 +280,7 @@ export class H264Parser {
                 push = true;
                 break;
             case NALU.AUD:
-                debug.log('AUD - ignoing and disable HD mode for live channel');
-                if (this.remuxer.isHDAvail) {
-                    this.remuxer.isHDAvail = false;
-                }
+                debug.log('AUD - ignoing');
                 break;
             case NALU.SEI:
                 debug.log('SEI - ignoing');

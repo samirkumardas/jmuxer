@@ -1,7 +1,6 @@
 import * as debug from '../util/debug';
 let aacHeader;
 export class AACParser {
-    
     static get samplingRateMap() {
         return [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
     }
