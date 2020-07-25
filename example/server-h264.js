@@ -1,20 +1,21 @@
 const WebSocket = require('ws');
 const fs = require('fs');
-
 const PORT = process.env.PORT || 8080;
-let naluPerChunk = 30,
+let minNaluPerChunk = 30,
     interval = 0,
     current = 0,
     start = 0,
     end = 0,
     wss;
-
 function extractChunks(buffer) {
     let i = 0,
         length = buffer.byteLength,
         naluCount = 0,
         value,
+        unit,
+        ntype,
         state = 0,
+        lastIndex = 0,
         result = [];
 
     while (i < length) {
@@ -38,12 +39,17 @@ function extractChunks(buffer) {
                 if (value === 0) {
                     state = 3;
                 } else if (value === 1 && i < length) {
-                    naluCount++;
-                    if (naluCount === naluPerChunk) {
-                        result.push(i);
+                    if (lastIndex) {
+                        unit = buffer.slice(lastIndex, i - state -1);
+                        ntype = unit[0] & 0x1f;
+                        naluCount++;
+                    }
+                    if (naluCount >= minNaluPerChunk && ntype !== 1 && ntype !== 5) {
+                        result.push(lastIndex - state -1);
                         naluCount = 0;
                     }
                     state = 0;
+                    lastIndex = i;
                 } else {
                     state = 0;
                 }
@@ -52,7 +58,9 @@ function extractChunks(buffer) {
                 break;
         }
     }
-
+    if (naluCount > 0) {
+        result.push(lastIndex);
+    }
     return result;
 }
 
@@ -81,17 +89,32 @@ function openSocket() {
     });
 }
 
-function sendChunk() {
-    let anyOneThere = false;
+function writeChunk() {
+    for (i = 0; i < chunks.length; i++) {
+        end = chunks[i];
+        chunk = buffer.slice(start, end);
+        start = end;
+        fs.writeFile("./h264/" + i + '.h264', chunk,  "binary", function(err) {
+            if(err) {
+                console.log(err);
+            }
+        });
+    }
+}
+//writeChunk();
 
+function sendChunk() {
+    let anybodyThere = false;
+    if (current >= total) {
+        current = 0;
+        start = 0;
+    }
     end = chunks[current];
     current++;
-    if (current == total) current = 0;
-
     wss.clients.forEach(function each(client) {
         let chunk;
         if (client.readyState === WebSocket.OPEN) {
-            anyOneThere = true;
+            anybodyThere = true;
             chunk = buffer.slice(start, end);
             start = end;
             try {
@@ -99,13 +122,16 @@ function sendChunk() {
             } catch(e) {
                console.log(`Sending failed:`, e); 
             }
-            if (current % 50 == 0){
+            if (current % 50 == 0) {
                  console.log(`I am serving, no problem!`);
+            }
+            if (current == 0) {
+                 console.log(`Started from first chunk...`);
             }
         }
     });
 
-    if (!anyOneThere) {
+    if (!anybodyThere) {
         if (interval) {
             current = start = end = 0;
             clearInterval(interval);
@@ -113,5 +139,4 @@ function sendChunk() {
         }
     }
 }
-
 openSocket();
