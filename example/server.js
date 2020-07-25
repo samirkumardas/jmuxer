@@ -44,7 +44,7 @@ function openSocket() {
 
           interval = setInterval(function() {
             sendChunk();
-          }, 1800);
+          }, 1500);
     });
 }
 
