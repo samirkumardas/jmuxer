@@ -28,7 +28,7 @@
     "type": "git",
     "url": "https://github.com/samirkumardas/jmuxer.git"
   },
-  "author": "ringID web",
+  "author": "Samir Das",
   "devDependencies": {
     "babel-plugin-external-helpers": "^6.22.0",
     "babel-preset-es2015": "^6.24.1",
