@@ -28,8 +28,11 @@ export class NALU {
 
     constructor(data) {
         this.payload = data;
-        this.nri = (this.payload[0] & 0x60) >> 5;
+        this.nri = (this.payload[0] & 0x60) >> 5; // nal_ref_idc
         this.ntype = this.payload[0] & 0x1f;
+        this.isvcl = this.ntype == 1 || this.ntype == 5;
+        this.stype = ''; // slice_type
+        this.isfmb = false; // first_mb_in_slice
     }
 
     toString() {
@@ -37,7 +40,7 @@ export class NALU {
     }
 
     getNri() {
-        return this.nri >> 6;
+        return this.nri;
     }
 
     type() {
@@ -45,19 +48,26 @@ export class NALU {
     }
 
     isKeyframe() {
-        return this.ntype == NALU.IDR;
+        return this.ntype === NALU.IDR || this.stype === 7;
+    }
+    
+    getPayload() {
+        return this.payload;
+    }
+
+    getPayloadSize() {
+        return this.payload.byteLength;
     }
 
     getSize() {
-        return 4 + this.payload.byteLength;
+        return 4 + this.getPayloadSize();
     }
 
     getData() {
         const result = new Uint8Array(this.getSize());
         const view = new DataView(result.buffer);
         view.setUint32(0, this.getSize() - 4);
-
-        result.set(this.payload, 4);
+        result.set(this.getPayload(), 4);
         return result;
     }
 }
