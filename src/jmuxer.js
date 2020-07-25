@@ -40,7 +40,7 @@ export default class JMuxmer extends Event {
         if (!this.options.fps) {
             this.options.fps = 30;
         }
-        this.frameDuration = (1000 / this.options.fps) | 0;
+        this.frameDuration = (1000 / this.options.fps) | 0; // todo remove
 
         this.node = typeof this.options.node === 'string' ? document.getElementById(this.options.node) : this.options.node;
     
@@ -54,12 +54,11 @@ export default class JMuxmer extends Event {
         this.setupMSE();
         this.remuxController = new RemuxController(this.options.clearBuffer); 
         this.remuxController.addTrack(this.options.mode);
-        
 
         this.mseReady = false;
         this.lastCleaningTime = Date.now();
-        this.keyframeCache = [];
-        this.frameCounter  = 0;
+        this.kfPosition = [];
+        this.kfCounter  = 0;
 
         /* events callback */
         this.remuxController.on('buffer', this.onBuffer.bind(this));
@@ -78,8 +77,7 @@ export default class JMuxmer extends Event {
 
     feed(data) {
         let remux = false,
-            nalus,
-            aacFrames,
+            slices,
             duration,
             chunks = {
                 video: [],
@@ -89,96 +87,99 @@ export default class JMuxmer extends Event {
         if (!data || !this.remuxController) return;
         duration = data.duration ? parseInt(data.duration) : 0;
         if (data.video) {  
-            nalus = H264Parser.extractNALu(data.video);
-            if (nalus.length > 0) {
-                chunks.video = this.getVideoFrames(nalus, duration);
+            slices = H264Parser.extractNALu(data.video);
+            if (slices.length > 0) {
+                chunks.video = this.getVideoFrames(slices, duration);
                 remux = true;
             }
         }
         if (data.audio) {
-            aacFrames = AACParser.extractAAC(data.audio);
-            if (aacFrames.length > 0) {
-                chunks.audio = this.getAudioFrames(aacFrames, duration);
+            slices = AACParser.extractAAC(data.audio);
+            if (slices.length > 0) {
+                chunks.audio = this.getAudioFrames(slices, duration);
                 remux = true;
             }
         }
         if (!remux) {
-            debug.error('Input object must have video and/or audio property. Make sure it is not empty and valid typed array');
+            debug.error('Input object must have video and/or audio property. Make sure it is a valid typed array');
             return;
         }
         this.remuxController.remux(chunks);
     }
 
     getVideoFrames(nalus, duration) {
-        let nalu,
-            units = [],
-            samples = [],
-            naluObj,
-            sampleDuration,
-            adjustDuration = 0,
-            numberOfFrames = [];
+        let units = [],
+            frames = [],
+            fd = 0,
+            tt = 0,
+            keyFrame = false,
+            vcl = false;
 
-        for (nalu of nalus) {
-            naluObj = new NALU(nalu);
-            units.push(naluObj);
-            if (naluObj.type() === NALU.IDR || naluObj.type() === NALU.NDR) {
-                samples.push({units});
+        for (let nalu of nalus) {
+            let unit = new NALU(nalu);
+            if (unit.type() === NALU.IDR || unit.type() === NALU.NDR) {
+                H264Parser.parseHeader(unit);
+            }
+            if (units.length && vcl && (unit.isfmb || !unit.isvcl)) {
+                frames.push({
+                    units,
+                    keyFrame
+                });
                 units = [];
-                if (this.options.clearBuffer) {
-                    if (naluObj.type() === NALU.IDR) {
-                        numberOfFrames.push(this.frameCounter);
-                    }
-                    this.frameCounter++;
-                }
+                keyFrame = false;
+                vcl = false;
+            }
+            units.push(unit);
+            keyFrame = keyFrame || unit.isKeyframe();
+            vcl = vcl || unit.isvcl;
+        }
+        if (units.length) {
+            if (vcl || !frames.length) {
+                frames.push({
+                    units,
+                    keyFrame
+                });
+            } else {
+                let last = frames.length - 1;
+                frames[last].units = frames[last].units.concat(units);
             }
         }
+        fd = duration ? duration / frames.length | 0 : this.frameDuration;
+        tt = duration ? (duration - (fd * frames.length)) : 0;
         
-        if (duration) {
-            sampleDuration = duration / samples.length | 0;
-            adjustDuration = (duration - (sampleDuration * samples.length));
-        } else {
-            sampleDuration = this.frameDuration;
-        }
-        samples.map((sample) => {
-            sample.duration = adjustDuration > 0 ? (sampleDuration + 1) : sampleDuration;
-            if (adjustDuration !== 0) {
-                adjustDuration--;
+        frames.map((frame) => {
+            frame.duration = fd;
+            if (tt > 0) {
+                frame.duration++;
+                tt--;
+            }
+            this.kfCounter++;
+            if (frame.keyFrame && this.options.clearBuffer) {
+                this.kfPosition.push((this.kfCounter * fd) / 1000);
             }
         });
-
-        /* cache keyframe times if clearBuffer set true */
-        if (this.options.clearBuffer) {
-            numberOfFrames = numberOfFrames.map((total) => {
-                return (total * sampleDuration) / 1000;
-            });
-            this.keyframeCache = this.keyframeCache.concat(numberOfFrames);
-        }
-        return samples;
+        debug.log(`jmuxer: No. of frames of the last chunk: ${frames.length}`);
+        return frames;
     }
 
     getAudioFrames(aacFrames, duration) {
-        let samples = [],
-            units,
-            sampleDuration,
-            adjustDuration = 0;
+        let frames = [],
+            fd = 0,
+            tt = 0;
 
-        for (units of aacFrames) {
-            samples.push({units});
+        for (let units of aacFrames) {
+            frames.push({units});
         }
-
-        if (duration) {
-            sampleDuration = duration / samples.length | 0;
-            adjustDuration = (duration - (sampleDuration * samples.length));
-        } else {
-            sampleDuration = this.frameDuration;
-        }
-        samples.map((sample) => {
-            sample.duration = adjustDuration > 0 ? (sampleDuration + 1) : sampleDuration;
-            if (adjustDuration !== 0) {
-                adjustDuration--;
+        fd = duration ? duration / frames.length | 0 : this.frameDuration;
+        tt = duration ? (duration - (fd * frames.length)) : 0;
+        frames.map((frame) => {
+            frame.duration = fd;
+            if (tt > 0) {
+                frame.duration++;
+                tt--;
             }
         });
-        return samples;
+        return frames;
     }
 
     destroy() {
@@ -225,7 +226,6 @@ export default class JMuxmer extends Event {
     }
 
     startInterval() {
-
         this.interval = setInterval(()=>{
             if (this.bufferControllers) {
                 this.releaseBuffer();
@@ -246,33 +246,30 @@ export default class JMuxmer extends Event {
         }
     }
 
-    getSafeBufferClearLimit(offset) {
+    getSafeClearOffsetOfBuffer(offset) {
         let maxLimit = (this.options.mode === 'audio' && offset) || 0,
             adjacentOffset;
-
-        for (let i = 0; i < this.keyframeCache.length; i++) {
-            if (this.keyframeCache[i] >= offset) {
+        for (let i = 0; i < this.kfPosition.length; i++) {
+            if (this.kfPosition[i] >= offset) {
                 break;
             }
-            adjacentOffset = this.keyframeCache[i];
+            adjacentOffset = this.kfPosition[i];
         }
-
         if (adjacentOffset) {
-            this.keyframeCache = this.keyframeCache.filter( keyframePoint => {
-                if (keyframePoint < adjacentOffset) {
-                    maxLimit = keyframePoint;
+            this.kfPosition = this.kfPosition.filter( kfDelimiter => {
+                if (kfDelimiter < adjacentOffset) {
+                    maxLimit = kfDelimiter;
                 }
-                return keyframePoint >= adjacentOffset;
+                return kfDelimiter >= adjacentOffset;
             });
         }
-        
         return maxLimit;
     }
 
     clearBuffer() {
         if (this.options.clearBuffer && (Date.now() - this.lastCleaningTime) > 10000) {
             for (let type in this.bufferControllers) {
-                let cleanMaxLimit = this.getSafeBufferClearLimit(this.node.currentTime);
+                let cleanMaxLimit = this.getSafeClearOffsetOfBuffer(this.node.currentTime);
                 this.bufferControllers[type].initCleanup(cleanMaxLimit);
             }
             this.lastCleaningTime = Date.now();
