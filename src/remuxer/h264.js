@@ -10,7 +10,6 @@ export class H264Remuxer extends BaseRemuxer {
         this.nextDts = 0;
         this.dts = 0;
         this.timescale = 1000;
-
         this.mp4track = {
             id: BaseRemuxer.getTrackID(),
             type: 'video',
@@ -24,7 +23,6 @@ export class H264Remuxer extends BaseRemuxer {
             duration: this.timescale,
             samples: [],
         };
-
         this.samples = [];
         this.h264 = new H264Parser(this);
     }
@@ -35,33 +33,23 @@ export class H264Remuxer extends BaseRemuxer {
         this.mp4track.pps = '';
     }
 
-    remux(samples) {
-        let sample,
-            units,
-            unit,
-            size,
-            keyFrame;
-        for (sample of samples) {
-            units = [];
-            size = 0;
-            keyFrame = false;
-            for (unit of sample.units) {
+    remux(frames) {
+        for (let frame of frames) {
+            let units = [];
+            let size = 0;
+            for (let unit of frame.units) {
                 if (this.h264.parseNAL(unit)) {
                     units.push(unit);
                     size += unit.getSize();
-                    if (!keyFrame) {
-                        keyFrame = unit.isKeyframe();
-                    }
                 }
             }
-
             if (units.length > 0 && this.readyToDecode) {
                 this.mp4track.len += size;
                 this.samples.push({
                     units: units,
                     size: size,
-                    keyFrame: keyFrame,
-                    duration: sample.duration,
+                    keyFrame: frame.keyFrame,
+                    duration: frame.duration,
                 });
             }
         }
@@ -71,7 +59,6 @@ export class H264Remuxer extends BaseRemuxer {
         if (!this.isReady()) {
             return null;
         }
-
         let payload = new Uint8Array(this.mp4track.len);
         let offset = 0;
         let samples = this.mp4track.samples;
@@ -79,19 +66,16 @@ export class H264Remuxer extends BaseRemuxer {
             duration;
 
         this.dts = this.nextDts;
-
         while (this.samples.length) {
             let sample = this.samples.shift(),
                 units = sample.units;
 
             duration = sample.duration;
-
             if (duration <= 0) {
                 debug.log(`remuxer: invalid sample duration at DTS: ${this.nextDts} :${duration}`);
                 this.mp4track.len -= sample.size;
                 continue;
             }
-
             this.nextDts += duration;
             mp4Sample = {
                 size: sample.size,
@@ -111,12 +95,11 @@ export class H264Remuxer extends BaseRemuxer {
                 payload.set(unit.getData(), offset);
                 offset += unit.getSize();
             }
-
             samples.push(mp4Sample);
         }
 
         if (!samples.length) return null;
-
+        
         return new Uint8Array(payload.buffer, 0, this.mp4track.len);
     }
 }

@@ -36,22 +36,21 @@ export class AACRemuxer extends BaseRemuxer {
         this.mp4track.timescale = this.timescale;
     }
 
-    remux(samples) {
-        let config,
-            sample,
-            size,
-            payload;
-        for (let sample of samples) {
-            payload = sample.units;
-            size = payload.byteLength;
-            this.samples.push({
-                units: payload,
-                size: size,
-                duration: sample.duration,
-            });
-            this.mp4track.len += size;
-            if (!this.readyToDecode) {
-                this.aac.setAACConfig();
+    remux(frames) {
+        if (frames.length > 0) {
+            for (let i = 0; i < frames.length; i++) {
+                let frame = frames[i];
+                let payload = frame.units;
+                let size = payload.byteLength;
+                this.samples.push({
+                    units: payload,
+                    size: size,
+                    duration: frame.duration,
+                });
+                this.mp4track.len += size;
+                if (!this.readyToDecode) {
+                    this.aac.setAACConfig();
+                }
             }
         }
     }
