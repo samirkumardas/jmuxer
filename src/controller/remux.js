@@ -68,7 +68,7 @@ export default class RemuxController extends Event {
                     };
                     this.dispatch('buffer', data);
                     let duration = secToTime(track.dts / 1000);
-                    debug.log(`put segment (${type}): ${track.seq} dts: ${track.dts} samples: ${track.mp4track.samples.length} second: ${duration}`);
+                    debug.log(`put segment (${type}): ${track.seq} dts: ${track.dts} gop: ${track.mp4track.samples.length} second: ${duration}`);
                     track.flush();
                 }
             }
@@ -84,10 +84,10 @@ export default class RemuxController extends Event {
 
     remux(data) {
         for (let type of this.trackTypes) {
-            let samples = data[type];
+            let frames = data[type];
             if (type === 'audio' && this.tracks.video && !this.tracks.video.readyToDecode) continue; /* if video is present, don't add audio until video get ready */
-            if (samples.length > 0) {
-                this.tracks[type].remux(samples);
+            if (frames.length > 0) {
+                this.tracks[type].remux(frames);
             }
         }
         this.flush();
