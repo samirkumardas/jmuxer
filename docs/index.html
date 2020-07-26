@@ -5,16 +5,44 @@
     <meta name="description" content="jMuxer - a simple javascript mp4 muxer for non-standard streaming communications protocol">
     <meta name="keywords" content="h264 player, mp4 player, mse, mp4 muxing, jmuxer, aac player">
     <title>JMuxer demo</title>
+    <script async defer src="https://buttons.github.io/buttons.js"></script>
+    <style type="text/css">
+        .github-tools {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+        }
+        a.h264-player {
+            font-size: 20px;
+            text-decoration: none;
+            color: #07568e;
+            margin-top: 10px;
+            display: block;
+        }
+        .gesture {
+            font-size: 15px;
+            color: #ad4903;
+            margin-top: 10px;
+        }
+</style>
 </head>
 <body>
 
 <h2>jMuxer Demo</h2>
 <p>Sample demo node server is running on heroku free hosting</p>
 <br /><br />
+<div class="github-tools">
+<a class="github-button" href="https://github.com/samirkumardas/jmuxer/fork" data-color-scheme="no-preference: dark; light: dark; dark: dark;" data-size="large" data-show-count="true" aria-label="Fork samirkumardas/jmuxer on GitHub">Fork</a>
+<!-- Place this tag where you want the button to render. -->
+<a class="github-button" href="https://github.com/samirkumardas/jmuxer" data-color-scheme="no-preference: dark; light: dark; dark: dark;" data-size="large" data-show-count="true" aria-label="Star samirkumardas/jmuxer on GitHub">Star</a>
+</div>
 
 <div id="container" style="width: 600px; margin: 0 auto;">
     <video width="100%" controls autoplay poster="images/loader-thumb.jpg" id="player"></video>
+    <div class="gesture">If it does not play automatically, Click the play button to intiate the video</div>
+    <a class="h264-player" href="https://samirkumardas.github.io/jmuxer/h265_player.html">Play a h264 file online</a>
 </div>
+
 <script>
 
   function parse(data) {

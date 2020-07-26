@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="description" content="H264 live player using jMuxer">
+    <meta name="keywords" content="h264 player, mp4 player, mse, mp4 muxing, jmuxer, aac player">
+    <title>Online h264 player using jMuxer</title>
+    <script async defer src="https://buttons.github.io/buttons.js"></script>
+</head>
+<body>
+
+<h1>Online h264 player</h1>
+
+<div class="github-tools">
+<a class="github-button" href="https://github.com/samirkumardas/jmuxer/fork" data-color-scheme="no-preference: dark; light: dark; dark: dark;" data-size="large" data-show-count="true" aria-label="Fork samirkumardas/jmuxer on GitHub">Fork</a>
+<!-- Place this tag where you want the button to render. -->
+<a class="github-button" href="https://github.com/samirkumardas/jmuxer" data-color-scheme="no-preference: dark; light: dark; dark: dark;" data-size="large" data-show-count="true" aria-label="Star samirkumardas/jmuxer on GitHub">Star</a>
+</div>
+
+<div id="container" style="width: 600px; margin: 0 auto;">
+    <div class="meta-info">
+        <div class="column">
+            <label for="fps">Frame Rate:</label>
+            <input type="text" id="fps-input" name="fps" value="30" />
+        </div>
+        <div class="or-column">Or</div>
+        <div class="column">
+            <label for="fps">Duration (seconds):</label>
+            <input type="text" id="duration-input" name="duration" value="" />
+        </div>
+    </div>
+    <div class="file-input">
+        <label for="h264_file">Choose a h264 File (Annex-B)</label>
+        <input type="file" id="h264_file" name="h264_file" />
+    </div>
+    <button id="play-btn">Play</button>
+    
+    <video width="100%" controls autoplay id="player"></video>
+    <div class="gesture">If it does not play automatically, Click the play button to intiate the video</div>
+</div>
+<style type="text/css">
+.file-input {
+    padding: 20px 10px;
+    background: #f7f7f7;
+    border: 1px solid #9a9a9a;
+    margin-bottom: 10px;
+}
+.meta-info {
+    display: flex;
+    background: #f7f7f7;
+    border: 1px solid #9a9a9a;
+    margin-bottom: 10px;
+    padding: 10px;
+}
+.or-column {
+    width: 40px;
+    text-align: center;
+    color: #085a94fa;
+    text-transform: uppercase;
+    font-size: 17px;
+    font-weight: bold;
+}
+.meta-info input {
+    padding: 5px;
+    outline: 0;
+}
+#play-btn {
+    background: #3498db;
+    color: #fff;
+    padding: 7px;
+    width: 100%;
+    border: 1px solid #0880d0;
+    font-size: 15px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+#play-btn:hover {
+   background: #05568c;
+}
+.github-tools {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+}
+</style>
+<script>
+ window.onload = function() {
+    var jmuxer,
+        duration;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        jmuxer.feed({
+            video: new Uint8Array(e.target.result),
+            duration: duration
+        });
+    };
+    document.getElementById('play-btn').addEventListener('click', function(e) {
+        if (jmuxer) {
+            jmuxer.destroy();
+        }
+        var file = document.getElementById('h264_file');
+        if (!file.files.length) {
+            alert('Please choose a file.');
+            return;
+        }
+        var fps = parseInt(document.getElementById('fps-input').value) || 30;
+        duration = parseInt(document.getElementById('duration-input').value) * 1000;
+        reader.readAsArrayBuffer(file.files[0]);
+        jmuxer = new JMuxer({
+            node: 'player',
+            mode: 'video',
+            flushingTime: 1000,
+            fps: fps,
+            clearBuffer: false,
+            debug: true
+        });
+    }, false);
+ }   
+</script>
+<script type="text/javascript" src="jmuxer.min.js"></script>
+</body>
+</html>

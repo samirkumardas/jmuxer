@@ -13,6 +13,7 @@ It was needed to play raw H264 and AAC data coming from live streaming encapsula
 Live Demo
 -------
 [Click here](https://samirkumardas.github.io/jmuxer/) to view a working demo
+[Click here](https://samirkumardas.github.io/jmuxer/h265_player.html) to play a h264 file online
 
 How to use?
 -------
@@ -162,6 +163,10 @@ A distribution version is available inside *dist* directory. However, if you nee
  2. cd jmuxer
  3. npm install
  4. npm run build OR npm run pro
+
+Support
+-----------
+If the project helps you, [buy me a cup of coffee!](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&currency_code=USD&business=payment2ocm@gmail.com&item_name=donation%20for%20jMuxer)
 
 Credits
 -----------

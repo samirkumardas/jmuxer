@@ -52,6 +52,7 @@ export default class RemuxController extends Event {
                 }
                 debug.log('Initial segment generated.');
                 this.initialized = true;
+                this.flush();
             }
         } else {
             for (let type of this.trackTypes) {

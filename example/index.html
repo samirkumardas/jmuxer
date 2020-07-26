@@ -4,14 +4,10 @@
     <meta charset="UTF-8">
     <meta name="description" content="jMuxer - a simple javascript mp4 muxer for non-standard streaming communications protocol">
     <meta name="keywords" content="h264 player, mp4 player, mse, mp4 muxing, jmuxer, aac player">
-    <title>JMuxer demo</title>
+    <title>jMuxer demo</title>
 </head>
 <body>
-<div id="container" style="width: 400px; margin: 0 auto;">
-    <video width="400" controls autoplay poster="images/loader-thumb.jpg" id="player"></video>
-</div>
 <script>
-
   function parse(data) {
       var input = new Uint8Array(data),
           dv = new DataView(input.buffer),
