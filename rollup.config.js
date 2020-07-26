@@ -1,8 +1,8 @@
 // Rollup plugins
 import babel from 'rollup-plugin-babel';
-import eslint from 'rollup-plugin-eslint';
+import { eslint } from 'rollup-plugin-eslint';
 import replace from 'rollup-plugin-replace';
-import uglify from 'rollup-plugin-uglify';
+import {uglify} from 'rollup-plugin-uglify';
 
 export default {
     input: 'src/jmuxer.js',

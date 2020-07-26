@@ -33,9 +33,11 @@ module.exports = function(config) {
             require('rollup-plugin-node-builtins')(),
             require('rollup-plugin-babel')()
         ],
-        format: 'iife',         // Helps prevent naming collisions.
-        name: 'Decoder', // Required for 'iife' format.
-        sourcemap: 'inline'     // Sensible for testing.
+        output: {
+            format: 'iife', // Helps prevent naming collisions.
+            name: 'JMuxer', // Required for 'iife' format.
+            sourcemap: 'inline', // Sensible for testing.
+        }
     },
 
     // test results reporter to use
