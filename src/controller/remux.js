@@ -69,7 +69,7 @@ export default class RemuxController extends Event {
                     };
                     this.dispatch('buffer', data);
                     let duration = secToTime(track.dts / 1000);
-                    debug.log(`put segment (${type}): ${track.seq} dts: ${track.dts} gop: ${track.mp4track.samples.length} second: ${duration}`);
+                    debug.log(`put segment (${type}): ${track.seq} dts: ${track.dts} frames: ${track.mp4track.samples.length} second: ${duration}`);
                     track.flush();
                 }
             }
