@@ -58,6 +58,7 @@ export default class JMuxmer extends Event {
         this.mseReady = false;
         this.lastCleaningTime = Date.now();
         this.kfPosition = [];
+        this.pendingUnits = {};
         this.kfCounter  = 0;
 
         /* events callback */
@@ -114,7 +115,12 @@ export default class JMuxmer extends Event {
             tt = 0,
             keyFrame = false,
             vcl = false;
-
+        if (this.pendingUnits.units) {
+            units      = this.pendingUnits.units;
+            vcl        = this.pendingUnits.vcl;
+            keyFrame   = this.pendingUnits.keyFrame;
+            this.pendingUnits = {};
+        }
         for (let nalu of nalus) {
             let unit = new NALU(nalu);
             if (unit.type() === NALU.IDR || unit.type() === NALU.NDR) {
@@ -134,7 +140,15 @@ export default class JMuxmer extends Event {
             vcl = vcl || unit.isvcl;
         }
         if (units.length) {
-            if (vcl || !frames.length) {
+            // lets keep indecisive nalus as pending in case of fixed fps
+            if (!duration) {
+                this.pendingUnits = {
+                    units,
+                    keyFrame,
+                    vcl
+                };
+            }
+            else if (vcl) {
                 frames.push({
                     units,
                     keyFrame
