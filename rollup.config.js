@@ -9,7 +9,7 @@ export default {
     output: [
         {
             file: 'example/jmuxer.min.js',
-            format: 'iife',
+            format: 'umd',
             name: 'JMuxer',
             sourcemap: false // 'inline'
         },

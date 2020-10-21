@@ -5,6 +5,7 @@ import { AACParser } from './parsers/aac.js';
 import Event from './util/event';
 import RemuxController from './controller/remux.js';
 import BufferController from './controller/buffer.js';
+import Mp4Controller from './controller/mp4.js';
 
 window.MediaSource = window.MediaSource || window.WebKitMediaSource;
 
