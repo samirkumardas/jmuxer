@@ -58,8 +58,8 @@ export default class JMuxmer extends Event {
         this.mseReady = false;
         this.lastCleaningTime = Date.now();
         this.kfPosition = [];
-        this.pendingUnits = {};
         this.kfCounter  = 0;
+        this.pendingUnits = {};
 
         /* events callback */
         this.remuxController.on('buffer', this.onBuffer.bind(this));
