@@ -111,7 +111,8 @@ Install module through `npm`
 
 const JMuxer = require('jmuxer');
 const jmuxer = new JMuxer({
-    debug: true
+    debug: true,
+    exportPath: '/Users/jumxer/output.mp4'
 });
             
 /* 
