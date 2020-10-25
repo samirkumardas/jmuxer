@@ -4,12 +4,11 @@ import { BaseRemuxer } from './base.js';
 
 export class H264Remuxer extends BaseRemuxer {
 
-    constructor() {
+    constructor(timescale) {
         super();
         this.readyToDecode = false;
         this.nextDts = 0;
         this.dts = 0;
-        this.timescale = 1000;
         this.mp4track = {
             id: BaseRemuxer.getTrackID(),
             type: 'video',
@@ -19,8 +18,8 @@ export class H264Remuxer extends BaseRemuxer {
             pps: '',
             width: 0,
             height: 0,
-            timescale: this.timescale,
-            duration: this.timescale,
+            timescale: timescale,
+            duration: timescale,
             samples: [],
         };
         this.samples = [];

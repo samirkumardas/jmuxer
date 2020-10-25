@@ -7,6 +7,9 @@
     <title>jMuxer demo</title>
 </head>
 <body>
+<div id="container" style="margin: 0 auto; text-align: center;">
+    <video style="border: 1px solid #333; max-width: 500px;" controls autoplay poster="images/loader-thumb.jpg" id="player"></video>
+</div>
 <script>
   function parse(data) {
       var input = new Uint8Array(data),

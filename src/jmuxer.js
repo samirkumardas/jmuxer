@@ -5,57 +5,38 @@ import { AACParser } from './parsers/aac.js';
 import Event from './util/event';
 import RemuxController from './controller/remux.js';
 import BufferController from './controller/buffer.js';
-
-window.MediaSource = window.MediaSource || window.WebKitMediaSource;
+import Mp4Controller from './controller/mp4.js';
+import { Writable } from 'stream';
 
 export default class JMuxmer extends Event {
-
     static isSupported(codec) {
         return (window.MediaSource && window.MediaSource.isTypeSupported(codec));
     }
 
     constructor(options) {
         super('jmuxer');
-        window.MediaSource = window.MediaSource || window.WebKitMediaSource;
-
         let defaults = {
             node: '',
             mode: 'both', // both, audio, video
             flushingTime: 1500,
             clearBuffer: true,
-            onReady: null, // function called when MSE is ready to accept frames
+            exportPath: './jmuxer.mp4',
             fps: 30,
-            debug: false
+            debug: false,
+            onReady: function() {}, // function called when MSE is ready to accept frames
         };
         this.options = Object.assign({}, defaults, options);
-
+        this.env = typeof process === 'object' && typeof window === 'undefined' ? 'node' : 'browser';
         if (this.options.debug) {
             debug.setLogger();
-        }
-
-        if (typeof this.options.node === 'string' && this.options.node == '') {
-            debug.error('no video element were found to render, provide a valid video element');
         }
 
         if (!this.options.fps) {
             this.options.fps = 30;
         }
-        this.frameDuration = (1000 / this.options.fps) | 0; // todo remove
-
-        this.node = typeof this.options.node === 'string' ? document.getElementById(this.options.node) : this.options.node;
-    
-        this.sourceBuffers = {};
-        this.isMSESupported = !!window.MediaSource;
-       
-        if (!this.isMSESupported) {
-            throw 'Oops! Browser does not support media source extension.';
-        }
-
-        this.setupMSE();
-        this.remuxController = new RemuxController(this.options.clearBuffer); 
+        this.frameDuration = (1000 / this.options.fps) | 0;
+        this.remuxController = new RemuxController(this.env);
         this.remuxController.addTrack(this.options.mode);
-
-        this.mseReady = false;
         this.lastCleaningTime = Date.now();
         this.kfPosition = [];
         this.kfCounter  = 0;
@@ -63,11 +44,50 @@ export default class JMuxmer extends Event {
 
         /* events callback */
         this.remuxController.on('buffer', this.onBuffer.bind(this));
-        this.remuxController.on('ready', this.createBuffer.bind(this));
+        if (this.env == 'browser') {
+            this.remuxController.on('ready', this.createBuffer.bind(this));
+            this.initBrowser();
+        } else {
+            this.initNode();
+        }
         this.startInterval();
     }
 
+    initBrowser() {
+        if (typeof this.options.node === 'string' && this.options.node == '') {
+            debug.error('no video element were found to render, provide a valid video element');
+        }
+        this.node = typeof this.options.node === 'string' ? document.getElementById(this.options.node) : this.options.node;
+        this.mseReady = false;
+        this.setupMSE();
+        this.sourceBuffers = {};
+    }
+
+    initNode() {
+        if (!this.options.exportPath) {
+            throw 'mp4 export path is missing.';
+        }
+        this.mp4Controller = new Mp4Controller(this.options.exportPath);
+        let feed = this.feed.bind(this);
+        this.stream = new Writable({
+            objectMode: true,
+            write(data, encoding, callback) {
+                feed(data);
+                callback();
+            }
+        });
+    }
+
+    toStream() {
+        return this.stream;
+    }
+
     setupMSE() {
+        window.MediaSource = window.MediaSource || window.WebKitMediaSource;
+        if (!window.MediaSource) {
+            throw 'Oops! Browser does not support media source extension.';
+        }
+        this.isMSESupported = !!window.MediaSource;
         this.mediaSource = new MediaSource();
         this.node.src = URL.createObjectURL(this.mediaSource);
         this.mediaSource.addEventListener('sourceopen', this.onMSEOpen.bind(this));
@@ -218,6 +238,13 @@ export default class JMuxmer extends Event {
             }
             this.bufferControllers = null;
         }
+        if (this.mp4Controller) {
+            this.mp4Controller.destroy();
+            this.mp4Controller = null;
+        }
+        if (this.stream) {
+            this.stream = null;
+        }
         this.node = false;
         this.mseReady = false;
         this.videoStarted = false;
@@ -291,8 +318,12 @@ export default class JMuxmer extends Event {
     }
 
     onBuffer(data) {
-        if (this.bufferControllers && this.bufferControllers[data.type]) {
-            this.bufferControllers[data.type].feed(data.payload);
+        if (this.env == 'browser') {
+            if (this.bufferControllers && this.bufferControllers[data.type]) {
+                this.bufferControllers[data.type].feed(data.payload);
+            }
+        } else {
+            this.mp4Controller.feed(data.payload);
         }
     }
 
@@ -300,8 +331,7 @@ export default class JMuxmer extends Event {
     onMSEOpen() {
         this.mseReady = true;
         if (typeof this.options.onReady === 'function') {
-            this.options.onReady();
-            this.options.onReady = null;
+            this.options.onReady.call(null);
         }
         this.createBuffer();
     }

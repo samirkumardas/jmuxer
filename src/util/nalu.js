@@ -48,7 +48,7 @@ export class NALU {
     }
 
     isKeyframe() {
-        return this.ntype === NALU.IDR || this.stype === 7;
+        return this.ntype === NALU.IDR;
     }
     
     getPayload() {
