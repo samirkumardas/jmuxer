@@ -4,11 +4,11 @@
 
 jMuxer
 -------
-jMuxer - a simple javascript mp4 muxer for non-standard streaming communications protocol. Basically it does not care about communication protocol and it is simply a javscript mp4 remuxer intended to pay media file in the browser using media source extension. It expects raw H264 video data and AAC audio data in ADTS container as an input.
+jMuxer - a simple javascript mp4 muxer that works in both browser and node environment. It does not care about communication protocol and it is intended to play media files on the browser with the help of the media source extension. It also can export mp4 on the node environment. It expects raw H264 video data and/or AAC audio data in ADTS container as an input.
 
 What was the purpose of developing?
 -------
-It was needed to play raw H264 and AAC data coming from live streaming encapsulated into a custom transport container in a project. Each chunk would contain its duration, audio data and video data with simple 4 bytes header. Please check example section to check packet format. After struggling several days with few open source projects like hls.js, I have eneded up to make a new one that would be more simpler and minimalist to achieve my goal.
+It was needed to play raw H264 and AAC data coming from live streaming encapsulated into a custom transport container in a project. Each chunk would contain its duration, audio data, and video data with a simple 4 bytes header. Please check the example section to check the packet format. After struggling several days with few open source projects like hls.js, I have ended up making a new one that would be simpler and minimalist to achieve my goal.
 
 Live Demo
 -------
@@ -37,6 +37,8 @@ Available options are:
 *clearBuffer* - true/false. Either it will clear played media buffer automatically or not. Default is true. 
 
 *fps* - Optional value. Frame rate of the video if it is known/fixed value. It will be used to find frame duration if chunk duration is not available with provided media data. 
+
+*exportPath* - output path of the mp4 file. Available on Nodejs only.
 
 *onReady* - function. Will be called once MSE is ready.
 
@@ -99,11 +101,42 @@ const jmuxer = new JMuxer({
 
 ```
 
+**Node Example:**
+
+Install module through `npm`
+
+    npm install --save-dev jmuxer
+
+```
+
+const JMuxer = require('jmuxer');
+const jmuxer = new JMuxer({
+    debug: true
+});
+            
+/* 
+Now feed media data using `feed` method. 
+*/
+jmuxer.feed({
+      audio: audio,
+      video: video,
+      duration: duration
+});
+
+/* 
+Stream pipelining is also possible. Please take note the `stream is in object mode.
+*/
+let mp4Reader = getFeederStreamSomehow();
+mp4Reader.pipe(jmuxer.toStream());
+
+```
+
 **Available Methods**
 
 | Name        | Parameter           | Remark  |
 | ------------- |:-------------:| -----:|
 | feed      |  data object      |  object properites may have audio, video and duration. At least one media property i.e audio or video must be provided. If no duration is provided, it will calculate duration based on fps value |
+| toStream | -      |    Get a writeable stream in object mode to feed. Available on NodeJS only |
 | destroy | -      |    Destroy the jmuxer instance and release the resources |
   
  **Compatibility**
