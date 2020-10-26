@@ -38,8 +38,6 @@ Available options are:
 
 *fps* - Optional value. Frame rate of the video if it is known/fixed value. It will be used to find frame duration if chunk duration is not available with provided media data. 
 
-*exportPath* - output path of the mp4 file. Available on Nodejs only.
-
 *onReady* - function. Will be called once MSE is ready.
 
 *debug* - true/false. Will print debug log in browser console. Default is false.
@@ -184,11 +182,11 @@ then, visit *example/index.html* page using any webserver.
 
 Player Example for raw h264 only
 -----------
-Assuming you are still on `example` directory. Now run followngs:
+Assuming you are still in `example` directory. Now run followngs:
 
-*node server-h264.js*
+*node h264.js*
 
-then, visit *example/index-h264.html* page using any webserver.
+then, visit *example/h264.html* page using any webserver.
 
 How to build?
 ---------

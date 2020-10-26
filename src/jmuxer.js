@@ -5,7 +5,6 @@ import { AACParser } from './parsers/aac.js';
 import Event from './util/event';
 import RemuxController from './controller/remux.js';
 import BufferController from './controller/buffer.js';
-import Mp4Controller from './controller/mp4.js';
 import { Duplex } from 'stream';
 
 export default class JMuxmer extends Event {
@@ -20,7 +19,6 @@ export default class JMuxmer extends Event {
             mode: 'both', // both, audio, video
             flushingTime: 1500,
             clearBuffer: true,
-            exportPath: '',
             fps: 30,
             debug: false,
             onReady: function() {}, // function called when MSE is ready to accept frames
@@ -47,8 +45,6 @@ export default class JMuxmer extends Event {
         if (this.env == 'browser') {
             this.remuxController.on('ready', this.createBuffer.bind(this));
             this.initBrowser();
-        } else {
-            this.initNode();
         }
         this.startInterval();
     }
@@ -63,10 +59,7 @@ export default class JMuxmer extends Event {
         this.sourceBuffers = {};
     }
 
-    initNode() {
-        if (this.options.exportPath) {
-            this.mp4Controller = new Mp4Controller(this.options.exportPath);
-        }
+    createStream() {
         let feed = this.feed.bind(this);
         this.stream = new Duplex({
             writableObjectMode: true,
@@ -77,9 +70,6 @@ export default class JMuxmer extends Event {
                 callback();
             }
         });
-    }
-
-    createStream() {
         return this.stream;
     }
 
@@ -239,10 +229,6 @@ export default class JMuxmer extends Event {
             }
             this.bufferControllers = null;
         }
-        if (this.mp4Controller) {
-            this.mp4Controller.destroy();
-            this.mp4Controller = null;
-        }
         if (this.stream) {
             this.stream = null;
         }
@@ -323,12 +309,8 @@ export default class JMuxmer extends Event {
             if (this.bufferControllers && this.bufferControllers[data.type]) {
                 this.bufferControllers[data.type].feed(data.payload);
             }
-        } else {
-            if (this.mp4Controller) {
-                this.mp4Controller.feed(data.payload);
-            } else {
-                this.stream.push(data.payload);
-            }
+        } else if(this.stream) {
+            this.stream.push(data.payload);
         }
     }
 
