@@ -1,4 +1,3 @@
-const WebSocket = require('ws');
 const fs = require('fs');
 const { Readable } = require('stream');
 const JMuxer = require('./jmuxer.min');
@@ -11,12 +10,8 @@ let chunks = [],
     current = 0;
 
 const jmuxer = new JMuxer({
+    exportPath: './jmuxer.mp4',
     debug: true
-});
-const mp4Reader = new Readable({
-    objectMode: true,
-    read(size) {
-    }
 });
 
 fs.readdir(rawChunks, (err, files) => {
@@ -59,7 +54,7 @@ function parse(data) {
         anyOneThere = false;
     chunk = chunks[current];
     current++;
-    mp4Reader.push(parse(chunk));
+    jmuxer.feed(parse(chunk));
     if (current < total) {
         setTimeout(simulateChunk, 0);
     } else {
@@ -67,5 +62,3 @@ function parse(data) {
         process.exit();
     }
 }
-//pipe into jmuxer stream
-mp4Reader.pipe(jmuxer.toStream());

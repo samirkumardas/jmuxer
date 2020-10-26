@@ -125,10 +125,11 @@ jmuxer.feed({
 });
 
 /* 
-Stream pipelining is also possible. Please take note the `stream is in object mode.
+Streaming also possible. Please check the example files for more details
 */
 let mp4Reader = getFeederStreamSomehow();
-mp4Reader.pipe(jmuxer.toStream());
+let http_or_ws_or_any = getWritterStreamSomehow();
+mp4Reader.pipe(jmuxer.createStream()).pipe(http_or_ws_or_any);
 
 ```
 
@@ -137,7 +138,7 @@ mp4Reader.pipe(jmuxer.toStream());
 | Name        | Parameter           | Remark  |
 | ------------- |:-------------:| -----:|
 | feed      |  data object      |  object properites may have audio, video and duration. At least one media property i.e audio or video must be provided. If no duration is provided, it will calculate duration based on fps value |
-| toStream | -      |    Get a writeable stream in object mode to feed. Available on NodeJS only |
+| createStream | -      |    Get a writeable stream of fragmented mp4 buffer Available on NodeJS only |
 | destroy | -      |    Destroy the jmuxer instance and release the resources |
   
  **Compatibility**

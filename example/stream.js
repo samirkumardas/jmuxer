@@ -1,23 +1,44 @@
 const fs = require('fs');
+const WebSocket = require('ws');
 const { Readable } = require('stream');
 const JMuxer = require('./jmuxer.min');
 const jmuxer = new JMuxer({
     mode: 'video',
     fps: 30,
-    debug: true
+    debug: false
 });
 const mp4Reader = new Readable({
     objectMode: true,
     read(size) {
     }
 });
-
+const PORT = process.env.PORT || 8080;
 let minNaluPerChunk = 30,
     interval = 0,
     current = 0,
     start = 0,
     end = 0,
     wss;
+
+wss = new WebSocket.Server({ port: PORT });
+console.log('Server ready on port '+ PORT);
+wss.on('connection', function connection(ws) {
+    console.log('Socket connected. sending data...');
+    const wsstream = WebSocket.createWebSocketStream(ws);
+    //lets pipe into jmuxer stream, then websocket
+    mp4Reader.pipe(jmuxer.createStream()).pipe(wsstream);
+    
+    ws.on('error', function error(error) {
+        console.log('WebSocket error');
+    });
+    ws.on('close', function close(msg) {
+        console.log('WebSocket close');
+    });
+    setInterval(function() {
+        simulateChunk();
+    }, 500);
+});
+
 function extractChunks(buffer) {
     let i = 0,
         length = buffer.byteLength,
@@ -75,23 +96,18 @@ function extractChunks(buffer) {
     return result;
 }
 function simulateChunk() {
+    if (current >= total) {
+        current = 0;
+        start = 0;
+    }
     end = chunks[current];
+    current++;
     chunk = buffer.slice(start, end);
     start = end;
-    current++;
     mp4Reader.push({
         video: chunk
     });
-    if (current < total) {
-        setTimeout(simulateChunk, 0);
-    } else {
-        jmuxer.destroy();
-        process.exit();
-    }
 }
-
 let buffer = fs.readFileSync('./demo.h264');
 let chunks = extractChunks(buffer);
 let total = chunks.length;
-mp4Reader.pipe(jmuxer.toStream());
-simulateChunk();
