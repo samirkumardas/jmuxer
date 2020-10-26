@@ -125,7 +125,7 @@ jmuxer.feed({
 });
 
 /* 
-Streaming also possible. Please check the example files for more details
+Streaming is also possible. Please check the example files for more details
 */
 let mp4Reader = getFeederStreamSomehow();
 let http_or_ws_or_any = getWritterStreamSomehow();
@@ -138,7 +138,7 @@ mp4Reader.pipe(jmuxer.createStream()).pipe(http_or_ws_or_any);
 | Name        | Parameter           | Remark  |
 | ------------- |:-------------:| -----:|
 | feed      |  data object      |  object properites may have audio, video and duration. At least one media property i.e audio or video must be provided. If no duration is provided, it will calculate duration based on fps value |
-| createStream | -      |    Get a writeable stream of fragmented mp4 buffer Available on NodeJS only |
+| createStream | -      |    Get a writeable stream of fragmented mp4 buffer. Available on NodeJS only |
 | destroy | -      |    Destroy the jmuxer instance and release the resources |
   
  **Compatibility**
