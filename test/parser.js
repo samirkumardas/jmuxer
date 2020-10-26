@@ -1,4 +1,4 @@
-import {equal, deepEqual} from 'assert';
+//import { assert } from 'chai';
 
 import { H264Parser } from '../src/parsers/h264.js';
 import { AACParser } from '../src/parsers/aac.js';
@@ -11,24 +11,24 @@ describe('Parser tests --', function() {
       
       it('Number of extracted h264 NAL unit should be 2', function() {
          var result = H264Parser.extractNALu(h264);
-         equal(result.length, 2);
+         assert.equal(result.length, 2);
       });
 
       it('AAC pattern should return true', function() {
-         equal(AACParser.isAACPattern(aac), true); 
+         assert.equal(AACParser.isAACPattern(aac), true); 
       });
 
       it('AAC header length should be 7 since CRC not present', function() {
-         equal(AACParser.getHeaderLength(aac), 7); 
+         assert.equal(AACParser.getHeaderLength(aac), 7); 
       });
 
       it('AAC frame length should be 284', function() {
-         equal(AACParser.getFrameLength(aac), 284); 
+         assert.equal(AACParser.getFrameLength(aac), 284); 
       });
 
       it('Number of extracted AAC frames should be 1', function() {
          var result = AACParser.extractAAC(aac);
-         equal(result.length, 1); 
+         assert.equal(result.length, 1); 
       });
 });
 
