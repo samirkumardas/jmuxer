@@ -61,12 +61,17 @@ export default class JMuxmer extends Event {
 
     createStream() {
         let feed = this.feed.bind(this);
+        let destroy = this.destroy.bind(this);
         this.stream = new Duplex({
             writableObjectMode: true,
             read(size) {
             },
             write(data, encoding, callback) {
                 feed(data);
+                callback();
+            },
+            final(callback) {
+                destroy();
                 callback();
             }
         });
@@ -230,6 +235,8 @@ export default class JMuxmer extends Event {
             this.bufferControllers = null;
         }
         if (this.stream) {
+            this.stream.emit('end');
+            this.stream.emit('close');
             this.stream = null;
         }
         this.node = false;
