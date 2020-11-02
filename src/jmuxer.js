@@ -224,6 +224,11 @@ export default class JMuxmer extends Event {
             }
             this.mediaSource = null;
         }
+        if (this.stream) {
+            this.remuxController.flush();
+            this.stream.push(null);
+            this.stream = null;
+        }
         if (this.remuxController) {
             this.remuxController.destroy();
             this.remuxController = null;
@@ -233,11 +238,6 @@ export default class JMuxmer extends Event {
                 this.bufferControllers[type].destroy();
             }
             this.bufferControllers = null;
-        }
-        if (this.stream) {
-            this.stream.emit('end');
-            this.stream.emit('close');
-            this.stream = null;
         }
         this.node = false;
         this.mseReady = false;
