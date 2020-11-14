@@ -206,4 +206,4 @@ Credits
 -----------
 Proudly inspired by [hls.js](https://github.com/video-dev/hls.js), [rtsp player](https://github.com/Streamedian/html5_rtsp_player)
 
-Cobrowse.io(https://cobrowse.io/) - for sponsoring the adaptation of jMuxer for Node.js
+[Cobrowse.io](https://cobrowse.io/) - for sponsoring the adaptation of jMuxer for Node.js
