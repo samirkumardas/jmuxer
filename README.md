@@ -125,9 +125,9 @@ jmuxer.feed({
 /* 
 Streaming is also possible. Please check the example files for more details
 */
-let h264Feeder = getFeederStreamSomehow();
+let h264_feeder = getFeederStreamSomehow();
 let http_or_ws_or_any = getWritterStreamSomehow();
-h264Feeder.pipe(jmuxer.createStream()).pipe(http_or_ws_or_any);
+h264_feeder.pipe(jmuxer.createStream()).pipe(http_or_ws_or_any);
 
 ```
 
