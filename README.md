@@ -81,7 +81,7 @@ Install module through `npm`
 
     npm install --save jmuxer
 
-```
+```js
 
 import JMuxer from 'jmuxer';
 
@@ -105,7 +105,7 @@ Install module through `npm`
 
     npm install --save-dev jmuxer
 
-```
+```js
 
 const JMuxer = require('jmuxer');
 const jmuxer = new JMuxer({
