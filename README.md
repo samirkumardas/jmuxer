@@ -6,10 +6,6 @@ jMuxer
 -------
 jMuxer - a simple javascript mp4 muxer that works in both browser and node environment. It is communication protocol agnostic and it is intended to play media files on the browser with the help of the media source extension. It also can export mp4 on the node environment. It expects raw H264 video data and/or AAC audio data in ADTS container as an input.
 
-What was the purpose of developing?
--------
-It was needed to play raw H264 and AAC data coming from live streaming encapsulated into a custom transport container in a project. Each chunk would contain its duration, audio data, and video data with a simple 4 bytes header. Please check the example section to check the packet format. After struggling several days with few open source projects like hls.js, I have ended up making a new one that would be simpler and minimalist to achieve my goal.
-
 Live Demo
 -------
 [Click here](https://samirkumardas.github.io/jmuxer/) to view a working demo
