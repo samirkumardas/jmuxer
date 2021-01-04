@@ -140,7 +140,7 @@ h264_feeder.pipe(jmuxer.createStream()).pipe(http_or_ws_or_any);
 
 Demo Server and player example
 -----------
-A simple node server with demo media data is available on example directory. Each media chunk is encapsulated with 4 bytes header where first two bytes is chunk duration and remaining two bytes is audio data length. Packet format is shown in image below:
+A simple node server and some demo media data are available in the example directory. In the example, each chunk/packet is consist of 4 bytes of header and the payload following the header. The first two bytes of the header contain the chunk duration and remaining two bytes contain the audio data length. Packet format is shown in the image below:
 
 **Packet format**
 
@@ -148,7 +148,7 @@ A simple node server with demo media data is available on example directory. Eac
 |-------------|-----------------|----------------|-----------------|
 |Duration (ms)|Audio Data Length|Audio Data (AAC)|Video Data (H264)|
 
-A steps guideline to obtain above format from your file:
+A step guideline to obtain above the packet format from your mp4 file using ffmpeg:
 1. Spliting video into 2 seconds chunks: `ffmpeg -i input.mp4 -c copy -map 0 -segment_time 2 -f segment %03d.mp4`
 1. Extracting h264 for all chunks: `for f in *.mp4; do ffmpeg -i "$f" -vcodec copy -an -bsf:v h264_mp4toannexb "${f:0:3}.h264"; done`
 1. Extracting audio for all chunks: `for f in *.mp4; do ffmpeg -i "$f" -acodec copy -vn "${f:0:3}.aac"; done`
