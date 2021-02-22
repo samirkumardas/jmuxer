@@ -1,5 +1,6 @@
 import * as debug from './util/debug';
 import { NALU } from './util/nalu.js';
+import { appendByteArray } from './util/utils.js';
 import { H264Parser } from './parsers/h264.js';
 import { AACParser } from './parsers/aac.js';
 import Event from './util/event';
@@ -39,7 +40,7 @@ export default class JMuxmer extends Event {
         this.kfPosition = [];
         this.kfCounter  = 0;
         this.pendingUnits = {};
-        this.remainingData = null;
+        this.remainingData = new Uint8Array();
 
         /* events callback */
         this.remuxController.on('buffer', this.onBuffer.bind(this));
@@ -106,21 +107,13 @@ export default class JMuxmer extends Event {
         if (!data || !this.remuxController) return;
         duration = data.duration ? parseInt(data.duration) : 0;
         if (data.video) {
-            if (!this.remainingData) {
-                this.remainingData = data.video;
-            } else {
-                const newRemainingData = new Uint8Array(this.remainingData.length + data.video.length);
-                newRemainingData.set(this.remainingData);
-                newRemainingData.set(data.video, this.remainingData.length);
-                this.remainingData = newRemainingData;
-            }
-
-            [slices, left] = H264Parser.extractNALu(this.remainingData);
+            data.video = appendByteArray(this.remainingData, data.video);
+            [slices, left] = H264Parser.extractNALu(data.video);
             if (slices.length > 0) {
                 chunks.video = this.getVideoFrames(slices, duration);
                 remux = true;
-                this.remainingData = left;
             }
+            this.remainingData = left || new Uint8Array();
         }
         if (data.audio) {
             slices = AACParser.extractAAC(data.audio);

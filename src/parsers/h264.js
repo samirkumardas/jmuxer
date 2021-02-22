@@ -34,7 +34,9 @@ export class H264Parser {
                     if (value === 0) {
                         state = 3;
                     } else if (value === 1 && i < length) {
-                        result.push(buffer.subarray(lastIndex, i - state -1));
+                        if (lastIndex != i - state -1) {
+                            result.push(buffer.subarray(lastIndex, i - state -1));
+                        }
                         lastIndex = i;
                         state = 0;
                     } else {
