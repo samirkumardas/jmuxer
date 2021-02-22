@@ -10,7 +10,8 @@ export class H264Parser {
             value,
             state = 0,
             result = [],
-            lastIndex;
+            left,
+            lastIndex = 0;
 
         while (i < length) {
             value = buffer[i++];
@@ -33,9 +34,7 @@ export class H264Parser {
                     if (value === 0) {
                         state = 3;
                     } else if (value === 1 && i < length) {
-                        if (lastIndex) {
-                            result.push(buffer.subarray(lastIndex, i - state -1));
-                        }
+                        result.push(buffer.subarray(lastIndex, i - state -1));
                         lastIndex = i;
                         state = 0;
                     } else {
@@ -47,10 +46,10 @@ export class H264Parser {
             }
         }
 
-        if (lastIndex) {
-            result.push(buffer.subarray(lastIndex, length));
+        if (lastIndex < length) {
+            left = buffer.subarray(lastIndex, length);
         }
-        return result;
+        return [result, left];
     }
 
     /**
