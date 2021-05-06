@@ -124,6 +124,12 @@ h264_feeder.pipe(jmuxer.createStream()).pipe(http_or_ws_or_any);
 | feed      |  data object      |  object properites may have audio, video and duration. At least one media property i.e audio or video must be provided. If no duration is provided, it will calculate duration based on fps value |
 | createStream | -      |    Get a writeable stream to feed buffer. Available on NodeJS only |
 | destroy | -      |    Destroy the jmuxer instance and release the resources |
+
+ **Typescript definition**
+ [Available on npmjs](https://www.npmjs.com/package/@types/jmuxer)
+ 
+    `npm install --save @types/jmuxer`
+
   
  **Compatibility**
  
