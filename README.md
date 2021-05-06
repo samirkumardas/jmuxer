@@ -126,9 +126,9 @@ h264_feeder.pipe(jmuxer.createStream()).pipe(http_or_ws_or_any);
 | destroy | -      |    Destroy the jmuxer instance and release the resources |
 
  **Typescript definition**
- [Available on npmjs](https://www.npmjs.com/package/@types/jmuxer)
+
  
-    `npm install --save @types/jmuxer`
+    npm install --save @types/jmuxer
 
   
  **Compatibility**
