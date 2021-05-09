@@ -35,7 +35,10 @@
     var socketURL = 'ws://localhost:8080';
     var jmuxer = new JMuxer({
         node: 'player',
-        debug: true
+        debug: true,
+        onError: function(data) {
+            console.log('Buffer error encountered', data);
+        }
      });
 
      var ws = new WebSocket(socketURL);

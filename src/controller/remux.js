@@ -20,11 +20,11 @@ export default class RemuxController extends Event {
 
     addTrack(type) {
         if (type === 'video' || type === 'both') {
-            this.tracks.video = new H264Remuxer(this.timescale);
+            this.tracks.video = new H264Remuxer(this.timescale, this.env);
             this.trackTypes.push('video');
         }
         if (type === 'audio' || type === 'both') {
-            this.tracks.audio = new AACRemuxer(this.timescale);
+            this.tracks.audio = new AACRemuxer(this.timescale, this.env);
             this.trackTypes.push('audio');
         }
     }

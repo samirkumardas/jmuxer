@@ -4,12 +4,12 @@ import { BaseRemuxer } from './base.js';
 
 export class AACRemuxer extends BaseRemuxer {
 
-    constructor(timescale) {
+    constructor(timescale, env) {
         super();
         this.readyToDecode = false;
         this.nextDts = 0;
         this.dts = 0;
-        
+        this.env = env;
         this.mp4track = {
             id: BaseRemuxer.getTrackID(),
             type: 'audio',

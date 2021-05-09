@@ -23,6 +23,7 @@ export default class JMuxmer extends Event {
             fps: 30,
             debug: false,
             onReady: function() {}, // function called when MSE is ready to accept frames
+            onError: function() {}, // function called when jmuxer encounters any buffer related error
         };
         this.options = Object.assign({}, defaults, options);
         this.env = typeof process === 'object' && typeof window === 'undefined' ? 'node' : 'browser';
@@ -341,6 +342,9 @@ export default class JMuxmer extends Event {
     }
 
     onBufferError(data) {
+        if (typeof this.options.onError === 'function') {
+            this.options.onError.call(null, data);
+        }
         if (data.name == 'QuotaExceeded') {
             this.bufferControllers[data.type].initCleanup(this.node.currentTime);
             return;
