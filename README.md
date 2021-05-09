@@ -36,6 +36,8 @@ Available options are:
 
 *onReady* - function. Will be called once MSE is ready.
 
+*onError* - function. Will be fired if jMuxer encounters any buffer error.
+
 *debug* - true/false. Will print debug log in browser console. Default is false.
 
 **Complete example:**
