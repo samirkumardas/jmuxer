@@ -273,7 +273,7 @@ export class H264Parser {
                 push = true;
                 break;
             case NALU.SPS:
-                if (!this.track.sps || this.isSafari) {
+                if (!this.track.sps) {
                     this.parseSPS(unit.getPayload());
                     if (!this.remuxer.readyToDecode && this.track.pps && this.track.sps) {
                         this.remuxer.readyToDecode = true;
