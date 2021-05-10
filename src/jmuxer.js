@@ -8,7 +8,7 @@ import RemuxController from './controller/remux.js';
 import BufferController from './controller/buffer.js';
 import { Duplex } from 'stream';
 
-export default class JMuxmer extends Event {
+export default class JMuxer extends Event {
     static isSupported(codec) {
         return (window.MediaSource && window.MediaSource.isTypeSupported(codec));
     }
@@ -182,7 +182,7 @@ export default class JMuxmer extends Event {
         }
         fd = duration ? duration / frames.length | 0 : this.frameDuration;
         tt = duration ? (duration - (fd * frames.length)) : 0;
-        
+
         frames.map((frame) => {
             frame.duration = fd;
             if (tt > 0) {
@@ -255,7 +255,7 @@ export default class JMuxmer extends Event {
         this.bufferControllers = {};
         for (let type in this.remuxController.tracks) {
             let track = this.remuxController.tracks[type];
-            if (!JMuxmer.isSupported(`${type}/mp4; codecs="${track.mp4track.codec}"`)) {
+            if (!JMuxer.isSupported(`${type}/mp4; codecs="${track.mp4track.codec}"`)) {
                 debug.error('Browser does not support codec');
                 return false;
             }
