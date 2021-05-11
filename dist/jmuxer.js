@@ -1,8 +1,24 @@
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
-  typeof define === 'function' && define.amd ? define(factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.JMuxer = factory());
-}(this, (function () { 'use strict';
+  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('stream')) :
+  typeof define === 'function' && define.amd ? define(['stream'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.JMuxer = factory(global.stream));
+}(this, (function (stream) { 'use strict';
+
+  function _typeof(obj) {
+    "@babel/helpers - typeof";
+
+    if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") {
+      _typeof = function (obj) {
+        return typeof obj;
+      };
+    } else {
+      _typeof = function (obj) {
+        return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+      };
+    }
+
+    return _typeof(obj);
+  }
 
   function _classCallCheck(instance, Constructor) {
     if (!(instance instanceof Constructor)) {
@@ -120,6 +136,41 @@
     };
   }
 
+  function _slicedToArray(arr, i) {
+    return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest();
+  }
+
+  function _arrayWithHoles(arr) {
+    if (Array.isArray(arr)) return arr;
+  }
+
+  function _iterableToArrayLimit(arr, i) {
+    if (typeof Symbol === "undefined" || !(Symbol.iterator in Object(arr))) return;
+    var _arr = [];
+    var _n = true;
+    var _d = false;
+    var _e = undefined;
+
+    try {
+      for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
+        _arr.push(_s.value);
+
+        if (i && _arr.length === i) break;
+      }
+    } catch (err) {
+      _d = true;
+      _e = err;
+    } finally {
+      try {
+        if (!_n && _i["return"] != null) _i["return"]();
+      } finally {
+        if (_d) throw _e;
+      }
+    }
+
+    return _arr;
+  }
+
   function _unsupportedIterableToArray(o, minLen) {
     if (!o) return;
     if (typeof o === "string") return _arrayLikeToArray(o, minLen);
@@ -135,6 +186,10 @@
     for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i];
 
     return arr2;
+  }
+
+  function _nonIterableRest() {
+    throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
   }
 
   function _createForOfIteratorHelper(o, allowArrayLike) {
@@ -301,7 +356,7 @@
     }, {
       key: "isKeyframe",
       value: function isKeyframe() {
-        return this.ntype === NALU.IDR || this.stype === 7;
+        return this.ntype === NALU.IDR;
       }
     }, {
       key: "getPayload",
@@ -331,6 +386,30 @@
 
     return NALU;
   }();
+
+  function appendByteArray(buffer1, buffer2) {
+    var tmp = new Uint8Array((buffer1.byteLength | 0) + (buffer2.byteLength | 0));
+    tmp.set(buffer1, 0);
+    tmp.set(buffer2, buffer1.byteLength | 0);
+    return tmp;
+  }
+  function secToTime(sec) {
+    var seconds,
+        hours,
+        minutes,
+        result = '';
+    seconds = Math.floor(sec);
+    hours = parseInt(seconds / 3600, 10) % 24;
+    minutes = parseInt(seconds / 60, 10) % 60;
+    seconds = seconds < 0 ? 0 : seconds % 60;
+
+    if (hours > 0) {
+      result += (hours < 10 ? '0' + hours : hours) + ':';
+    }
+
+    result += (minutes < 10 ? '0' + minutes : minutes) + ':' + (seconds < 10 ? '0' + seconds : seconds);
+    return result;
+  }
 
   /**
    * Parser for exponential Golomb codes, a variable-bitwidth number encoding scheme used by h264.
@@ -478,7 +557,8 @@
             value,
             state = 0,
             result = [],
-            lastIndex;
+            left,
+            lastIndex = 0;
 
         while (i < length) {
           value = buffer[i++]; // finding 3 or 4-byte start codes (00 00 01 OR 00 00 00 01)
@@ -505,7 +585,7 @@
               if (value === 0) {
                 state = 3;
               } else if (value === 1 && i < length) {
-                if (lastIndex) {
+                if (lastIndex != i - state - 1) {
                   result.push(buffer.subarray(lastIndex, i - state - 1));
                 }
 
@@ -519,11 +599,11 @@
           }
         }
 
-        if (lastIndex) {
-          result.push(buffer.subarray(lastIndex, length));
+        if (lastIndex < length) {
+          left = buffer.subarray(lastIndex, length);
         }
 
-        return result;
+        return [result, left];
       }
       /**
        * Advance the ExpGolomb decoder past a scaling list. The scaling
@@ -790,6 +870,7 @@
 
       this.remuxer = remuxer;
       this.track = remuxer.mp4track;
+      this.isSafari = remuxer.env =  /Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor);
     }
 
     _createClass(H264Parser, [{
@@ -850,7 +931,10 @@
               }
             }
 
-            push = true;
+            if (!this.isSafari) {
+              push = true;
+            }
+
             break;
 
           case NALU.AUD:
@@ -1536,23 +1620,13 @@
 
   var track_id = 1;
   var BaseRemuxer = /*#__PURE__*/function () {
-    _createClass(BaseRemuxer, null, [{
-      key: "getTrackID",
-      value: function getTrackID() {
-        return track_id++;
-      }
-    }]);
-
     function BaseRemuxer() {
       _classCallCheck(this, BaseRemuxer);
-
-      this.seq = 1;
     }
 
     _createClass(BaseRemuxer, [{
       key: "flush",
       value: function flush() {
-        this.seq++;
         this.mp4track.len = 0;
         this.mp4track.samples = [];
       }
@@ -1561,6 +1635,11 @@
       value: function isReady() {
         if (!this.readyToDecode || !this.samples.length) return null;
         return true;
+      }
+    }], [{
+      key: "getTrackID",
+      value: function getTrackID() {
+        return track_id++;
       }
     }]);
 
@@ -1572,7 +1651,7 @@
 
     var _super = _createSuper(AACRemuxer);
 
-    function AACRemuxer() {
+    function AACRemuxer(timescale, env) {
       var _this;
 
       _classCallCheck(this, AACRemuxer);
@@ -1581,15 +1660,15 @@
       _this.readyToDecode = false;
       _this.nextDts = 0;
       _this.dts = 0;
-      _this.timescale = 1000;
+      _this.env = env;
       _this.mp4track = {
         id: BaseRemuxer.getTrackID(),
         type: 'audio',
         channelCount: 0,
         len: 0,
         fragmented: true,
-        timescale: _this.timescale,
-        duration: _this.timescale,
+        timescale: timescale,
+        duration: timescale,
         samples: [],
         config: '',
         codec: ''
@@ -1684,7 +1763,7 @@
 
     var _super = _createSuper(H264Remuxer);
 
-    function H264Remuxer() {
+    function H264Remuxer(timescale, env) {
       var _this;
 
       _classCallCheck(this, H264Remuxer);
@@ -1693,7 +1772,7 @@
       _this.readyToDecode = false;
       _this.nextDts = 0;
       _this.dts = 0;
-      _this.timescale = 1000;
+      _this.env = env;
       _this.mp4track = {
         id: BaseRemuxer.getTrackID(),
         type: 'video',
@@ -1703,8 +1782,8 @@
         pps: '',
         width: 0,
         height: 0,
-        timescale: _this.timescale,
-        duration: _this.timescale,
+        timescale: timescale,
+        duration: timescale,
         samples: []
       };
       _this.samples = [];
@@ -1830,36 +1909,12 @@
     return H264Remuxer;
   }(BaseRemuxer);
 
-  function appendByteArray(buffer1, buffer2) {
-    var tmp = new Uint8Array((buffer1.byteLength | 0) + (buffer2.byteLength | 0));
-    tmp.set(buffer1, 0);
-    tmp.set(buffer2, buffer1.byteLength | 0);
-    return tmp;
-  }
-  function secToTime(sec) {
-    var seconds,
-        hours,
-        minutes,
-        result = '';
-    seconds = Math.floor(sec);
-    hours = parseInt(seconds / 3600, 10) % 24;
-    minutes = parseInt(seconds / 60, 10) % 60;
-    seconds = seconds < 0 ? 0 : seconds % 60;
-
-    if (hours > 0) {
-      result += (hours < 10 ? '0' + hours : hours) + ':';
-    }
-
-    result += (minutes < 10 ? '0' + minutes : minutes) + ':' + (seconds < 10 ? '0' + seconds : seconds);
-    return result;
-  }
-
   var RemuxController = /*#__PURE__*/function (_Event) {
     _inherits(RemuxController, _Event);
 
     var _super = _createSuper(RemuxController);
 
-    function RemuxController(streaming) {
+    function RemuxController(env) {
       var _this;
 
       _classCallCheck(this, RemuxController);
@@ -1868,7 +1923,10 @@
       _this.initialized = false;
       _this.trackTypes = [];
       _this.tracks = {};
-      _this.mediaDuration = streaming ? Infinity : 1000;
+      _this.seq = 1;
+      _this.env = env;
+      _this.timescale = 1000;
+      _this.mediaDuration = 0;
       return _this;
     }
 
@@ -1876,12 +1934,12 @@
       key: "addTrack",
       value: function addTrack(type) {
         if (type === 'video' || type === 'both') {
-          this.tracks.video = new H264Remuxer();
+          this.tracks.video = new H264Remuxer(this.timescale, this.env);
           this.trackTypes.push('video');
         }
 
         if (type === 'audio' || type === 'both') {
-          this.tracks.audio = new AACRemuxer();
+          this.tracks.audio = new AACRemuxer(this.timescale, this.env);
           this.trackTypes.push('audio');
         }
       }
@@ -1916,63 +1974,81 @@
         if (!this.initialized) {
           if (this.isReady()) {
             this.dispatch('ready');
-
-            var _iterator2 = _createForOfIteratorHelper(this.trackTypes),
-                _step2;
-
-            try {
-              for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
-                var type = _step2.value;
-                var track = this.tracks[type];
-                var data = {
-                  type: type,
-                  payload: MP4.initSegment([track.mp4track], this.mediaDuration, track.mp4track.timescale)
-                };
-                this.dispatch('buffer', data);
-              }
-            } catch (err) {
-              _iterator2.e(err);
-            } finally {
-              _iterator2.f();
-            }
-
-            log('Initial segment generated.');
+            this.initSegment();
             this.initialized = true;
             this.flush();
           }
         } else {
-          var _iterator3 = _createForOfIteratorHelper(this.trackTypes),
-              _step3;
+          var _iterator2 = _createForOfIteratorHelper(this.trackTypes),
+              _step2;
 
           try {
-            for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
-              var _type = _step3.value;
-              var _track = this.tracks[_type];
-
-              var pay = _track.getPayload();
+            for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+              var type = _step2.value;
+              var track = this.tracks[type];
+              var pay = track.getPayload();
 
               if (pay && pay.byteLength) {
-                var moof = MP4.moof(_track.seq, _track.dts, _track.mp4track);
+                var moof = MP4.moof(this.seq, track.dts, track.mp4track);
                 var mdat = MP4.mdat(pay);
                 var payload = appendByteArray(moof, mdat);
-                var _data = {
-                  type: _type,
+                var data = {
+                  type: type,
                   payload: payload,
-                  dts: _track.dts
+                  dts: track.dts
                 };
-                this.dispatch('buffer', _data);
-                var duration = secToTime(_track.dts / 1000);
-                log("put segment (".concat(_type, "): ").concat(_track.seq, " dts: ").concat(_track.dts, " gop: ").concat(_track.mp4track.samples.length, " second: ").concat(duration));
-
-                _track.flush();
+                this.dispatch('buffer', data);
+                var duration = secToTime(track.dts / this.timescale);
+                log("put segment (".concat(type, "): dts: ").concat(track.dts, " frames: ").concat(track.mp4track.samples.length, " second: ").concat(duration));
+                track.flush();
+                this.seq++;
               }
             }
           } catch (err) {
-            _iterator3.e(err);
+            _iterator2.e(err);
           } finally {
-            _iterator3.f();
+            _iterator2.f();
           }
         }
+      }
+    }, {
+      key: "initSegment",
+      value: function initSegment() {
+        var tracks = [];
+
+        var _iterator3 = _createForOfIteratorHelper(this.trackTypes),
+            _step3;
+
+        try {
+          for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
+            var type = _step3.value;
+            var track = this.tracks[type];
+
+            if (this.env == 'browser') {
+              var _data = {
+                type: type,
+                payload: MP4.initSegment([track.mp4track], this.mediaDuration, this.timescale)
+              };
+              this.dispatch('buffer', _data);
+            } else {
+              tracks.push(track.mp4track);
+            }
+          }
+        } catch (err) {
+          _iterator3.e(err);
+        } finally {
+          _iterator3.f();
+        }
+
+        if (this.env == 'node') {
+          var data = {
+            type: 'all',
+            payload: MP4.initSegment(tracks, this.mediaDuration, this.timescale)
+          };
+          this.dispatch('buffer', data);
+        }
+
+        log('Initial segment generated.');
       }
     }, {
       key: "isReady",
@@ -2155,86 +2231,114 @@
     return BufferController;
   }(Event);
 
-  window.MediaSource = window.MediaSource || window.WebKitMediaSource;
+  var JMuxer = /*#__PURE__*/function (_Event) {
+    _inherits(JMuxer, _Event);
 
-  var JMuxmer = /*#__PURE__*/function (_Event) {
-    _inherits(JMuxmer, _Event);
+    var _super = _createSuper(JMuxer);
 
-    var _super = _createSuper(JMuxmer);
-
-    _createClass(JMuxmer, null, [{
+    _createClass(JMuxer, null, [{
       key: "isSupported",
       value: function isSupported(codec) {
         return window.MediaSource && window.MediaSource.isTypeSupported(codec);
       }
     }]);
 
-    function JMuxmer(options) {
+    function JMuxer(options) {
       var _this;
 
-      _classCallCheck(this, JMuxmer);
+      _classCallCheck(this, JMuxer);
 
       _this = _super.call(this, 'jmuxer');
-      window.MediaSource = window.MediaSource || window.WebKitMediaSource;
       var defaults = {
         node: '',
         mode: 'both',
         // both, audio, video
         flushingTime: 1500,
         clearBuffer: true,
-        onReady: null,
-        // function called when MSE is ready to accept frames
         fps: 30,
-        debug: false
+        debug: false,
+        onReady: function onReady() {},
+        // function called when MSE is ready to accept frames
+        onError: function onError() {} // function called when jmuxer encounters any buffer related error
+
       };
       _this.options = Object.assign({}, defaults, options);
+      _this.env = (typeof process === "undefined" ? "undefined" : _typeof(process)) === 'object' && typeof window === 'undefined' ? 'node' : 'browser';
 
       if (_this.options.debug) {
         setLogger();
-      }
-
-      if (typeof _this.options.node === 'string' && _this.options.node == '') {
-        error('no video element were found to render, provide a valid video element');
       }
 
       if (!_this.options.fps) {
         _this.options.fps = 30;
       }
 
-      _this.frameDuration = 1000 / _this.options.fps | 0; // todo remove
-
-      _this.node = typeof _this.options.node === 'string' ? document.getElementById(_this.options.node) : _this.options.node;
-      _this.sourceBuffers = {};
-      _this.isMSESupported = !!window.MediaSource;
-
-      if (!_this.isMSESupported) {
-        throw 'Oops! Browser does not support media source extension.';
-      }
-
-      _this.setupMSE();
-
-      _this.remuxController = new RemuxController(_this.options.clearBuffer);
+      _this.frameDuration = 1000 / _this.options.fps | 0;
+      _this.remuxController = new RemuxController(_this.env);
 
       _this.remuxController.addTrack(_this.options.mode);
 
-      _this.mseReady = false;
       _this.lastCleaningTime = Date.now();
       _this.kfPosition = [];
       _this.kfCounter = 0;
+      _this.pendingUnits = {};
+      _this.remainingData = new Uint8Array();
       /* events callback */
 
       _this.remuxController.on('buffer', _this.onBuffer.bind(_assertThisInitialized(_this)));
 
-      _this.remuxController.on('ready', _this.createBuffer.bind(_assertThisInitialized(_this)));
+      if (_this.env == 'browser') {
+        _this.remuxController.on('ready', _this.createBuffer.bind(_assertThisInitialized(_this)));
+
+        _this.initBrowser();
+      }
 
       _this.startInterval();
 
       return _this;
     }
 
-    _createClass(JMuxmer, [{
+    _createClass(JMuxer, [{
+      key: "initBrowser",
+      value: function initBrowser() {
+        if (typeof this.options.node === 'string' && this.options.node == '') {
+          error('no video element were found to render, provide a valid video element');
+        }
+
+        this.node = typeof this.options.node === 'string' ? document.getElementById(this.options.node) : this.options.node;
+        this.mseReady = false;
+        this.setupMSE();
+        this.sourceBuffers = {};
+      }
+    }, {
+      key: "createStream",
+      value: function createStream() {
+        var feed = this.feed.bind(this);
+        var destroy = this.destroy.bind(this);
+        this.stream = new stream.Duplex({
+          writableObjectMode: true,
+          read: function read(size) {},
+          write: function write(data, encoding, callback) {
+            feed(data);
+            callback();
+          },
+          "final": function final(callback) {
+            destroy();
+            callback();
+          }
+        });
+        return this.stream;
+      }
+    }, {
       key: "setupMSE",
       value: function setupMSE() {
+        window.MediaSource = window.MediaSource || window.WebKitMediaSource;
+
+        if (!window.MediaSource) {
+          throw 'Oops! Browser does not support media source extension.';
+        }
+
+        this.isMSESupported = !!window.MediaSource;
         this.mediaSource = new MediaSource();
         this.node.src = URL.createObjectURL(this.mediaSource);
         this.mediaSource.addEventListener('sourceopen', this.onMSEOpen.bind(this));
@@ -2247,6 +2351,7 @@
       value: function feed(data) {
         var remux = false,
             slices,
+            left,
             duration,
             chunks = {
           video: [],
@@ -2256,12 +2361,21 @@
         duration = data.duration ? parseInt(data.duration) : 0;
 
         if (data.video) {
-          slices = H264Parser.extractNALu(data.video);
+          data.video = appendByteArray(this.remainingData, data.video);
+
+          var _H264Parser$extractNA = H264Parser.extractNALu(data.video);
+
+          var _H264Parser$extractNA2 = _slicedToArray(_H264Parser$extractNA, 2);
+
+          slices = _H264Parser$extractNA2[0];
+          left = _H264Parser$extractNA2[1];
 
           if (slices.length > 0) {
             chunks.video = this.getVideoFrames(slices, duration);
             remux = true;
           }
+
+          this.remainingData = left || new Uint8Array();
         }
 
         if (data.audio) {
@@ -2291,6 +2405,13 @@
             tt = 0,
             keyFrame = false,
             vcl = false;
+
+        if (this.pendingUnits.units) {
+          units = this.pendingUnits.units;
+          vcl = this.pendingUnits.vcl;
+          keyFrame = this.pendingUnits.keyFrame;
+          this.pendingUnits = {};
+        }
 
         var _iterator = _createForOfIteratorHelper(nalus),
             _step;
@@ -2325,7 +2446,14 @@
         }
 
         if (units.length) {
-          if (vcl || !frames.length) {
+          // lets keep indecisive nalus as pending in case of fixed fps
+          if (!duration) {
+            this.pendingUnits = {
+              units: units,
+              keyFrame: keyFrame,
+              vcl: vcl
+            };
+          } else if (vcl) {
             frames.push({
               units: units,
               keyFrame: keyFrame
@@ -2407,6 +2535,12 @@
           this.mediaSource = null;
         }
 
+        if (this.stream) {
+          this.remuxController.flush();
+          this.stream.push(null);
+          this.stream = null;
+        }
+
         if (this.remuxController) {
           this.remuxController.destroy();
           this.remuxController = null;
@@ -2433,7 +2567,7 @@
         for (var type in this.remuxController.tracks) {
           var track = this.remuxController.tracks[type];
 
-          if (!JMuxmer.isSupported("".concat(type, "/mp4; codecs=\"").concat(track.mp4track.codec, "\""))) {
+          if (!JMuxer.isSupported("".concat(type, "/mp4; codecs=\"").concat(track.mp4track.codec, "\""))) {
             error('Browser does not support codec');
             return false;
           }
@@ -2512,8 +2646,12 @@
     }, {
       key: "onBuffer",
       value: function onBuffer(data) {
-        if (this.bufferControllers && this.bufferControllers[data.type]) {
-          this.bufferControllers[data.type].feed(data.payload);
+        if (this.env == 'browser') {
+          if (this.bufferControllers && this.bufferControllers[data.type]) {
+            this.bufferControllers[data.type].feed(data.payload);
+          }
+        } else if (this.stream) {
+          this.stream.push(data.payload);
         }
       }
       /* Events on MSE */
@@ -2524,8 +2662,7 @@
         this.mseReady = true;
 
         if (typeof this.options.onReady === 'function') {
-          this.options.onReady();
-          this.options.onReady = null;
+          this.options.onReady.call(null);
         }
 
         this.createBuffer();
@@ -2539,6 +2676,10 @@
     }, {
       key: "onBufferError",
       value: function onBufferError(data) {
+        if (typeof this.options.onError === 'function') {
+          this.options.onError.call(null, data);
+        }
+
         if (data.name == 'QuotaExceeded') {
           this.bufferControllers[data.type].initCleanup(this.node.currentTime);
           return;
@@ -2558,9 +2699,9 @@
       }
     }]);
 
-    return JMuxmer;
+    return JMuxer;
   }(Event);
 
-  return JMuxmer;
+  return JMuxer;
 
 })));
