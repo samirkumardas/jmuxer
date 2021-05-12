@@ -870,7 +870,7 @@
 
       this.remuxer = remuxer;
       this.track = remuxer.mp4track;
-      this.isSafari = remuxer.env =  /Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor);
+      this.isSafari = remuxer.env == 'browser' && /Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor);
     }
 
     _createClass(H264Parser, [{

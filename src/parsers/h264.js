@@ -229,7 +229,7 @@ export class H264Parser {
     constructor(remuxer) {
         this.remuxer = remuxer;
         this.track = remuxer.mp4track;
-        this.isSafari = remuxer.env = 'browser' && /Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor);
+        this.isSafari = remuxer.env == 'browser' && /Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor);
     }
 
     parseSPS(sps) {
