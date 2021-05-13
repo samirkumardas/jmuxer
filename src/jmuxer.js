@@ -59,7 +59,6 @@ export default class JMuxer extends Event {
         this.node = typeof this.options.node === 'string' ? document.getElementById(this.options.node) : this.options.node;
         this.mseReady = false;
         this.setupMSE();
-        this.sourceBuffers = {};
     }
 
     createStream() {
@@ -88,11 +87,24 @@ export default class JMuxer extends Event {
         }
         this.isMSESupported = !!window.MediaSource;
         this.mediaSource = new MediaSource();
-        this.node.src = URL.createObjectURL(this.mediaSource);
+        this.url = URL.createObjectURL(this.mediaSource);
+        this.node.src = this.url;
+        this.mseEnded = false;
         this.mediaSource.addEventListener('sourceopen', this.onMSEOpen.bind(this));
         this.mediaSource.addEventListener('sourceclose', this.onMSEClose.bind(this));
         this.mediaSource.addEventListener('webkitsourceopen', this.onMSEOpen.bind(this));
         this.mediaSource.addEventListener('webkitsourceclose', this.onMSEClose.bind(this));
+    }
+
+    endMSE() {
+        if (!this.mseEnded) {
+            try {
+                this.mseEnded = true;
+                this.mediaSource.endOfStream();
+            } catch (e) {
+                debug.error('mediasource is not available to end');
+            }
+        }
     }
 
     feed(data) {
@@ -220,16 +232,6 @@ export default class JMuxer extends Event {
 
     destroy() {
         this.stopInterval();
-        if (this.mediaSource) {
-            try {
-                if (this.bufferControllers) {
-                    this.mediaSource.endOfStream();
-                }
-            } catch (e) {
-                debug.error(`mediasource is not available to end ${e.message}`);
-            }
-            this.mediaSource = null;
-        }
         if (this.stream) {
             this.remuxController.flush();
             this.stream.push(null);
@@ -244,10 +246,30 @@ export default class JMuxer extends Event {
                 this.bufferControllers[type].destroy();
             }
             this.bufferControllers = null;
+            this.endMSE();
         }
         this.node = false;
         this.mseReady = false;
         this.videoStarted = false;
+        this.mediaSource = null;
+    }
+
+    reset() {
+        this.node.pause();
+        if (this.remuxController) {
+            this.remuxController.reset();
+        }
+        if (this.bufferControllers) {
+            for (let type in this.bufferControllers) {
+                this.bufferControllers[type].destroy();
+            }
+            this.bufferControllers = null;
+            this.endMSE();
+        }
+        if (this.env == 'browser') {
+            this.initBrowser();
+        }
+        debug.log('JMuxer was reset');
     }
 
     createBuffer() {
@@ -261,7 +283,6 @@ export default class JMuxer extends Event {
             }
             let sb = this.mediaSource.addSourceBuffer(`${type}/mp4; codecs="${track.mp4track.codec}"`);
             this.bufferControllers[type] = new BufferController(sb, type);
-            this.sourceBuffers[type] = sb;
             this.bufferControllers[type].on('error', this.onBufferError.bind(this));
         }
     }
@@ -333,6 +354,7 @@ export default class JMuxer extends Event {
         if (typeof this.options.onReady === 'function') {
             this.options.onReady.call(null);
         }
+        URL.revokeObjectURL(this.url);
         this.createBuffer();
     }
 
@@ -342,23 +364,15 @@ export default class JMuxer extends Event {
     }
 
     onBufferError(data) {
-        if (typeof this.options.onError === 'function') {
-            this.options.onError.call(null, data);
-        }
         if (data.name == 'QuotaExceeded') {
             this.bufferControllers[data.type].initCleanup(this.node.currentTime);
             return;
         }
-
-        if (this.mediaSource.sourceBuffers.length > 0 && this.sourceBuffers[data.type]) {
-            this.mediaSource.removeSourceBuffer(this.sourceBuffers[data.type]);
+        else {
+            this.endMSE();
         }
-        if (this.mediaSource.sourceBuffers.length == 0) {
-            try {
-                this.mediaSource.endOfStream();
-            } catch (e) {
-                debug.error('mediasource is not available to end');
-            }
+        if (typeof this.options.onError === 'function') {
+            this.options.onError.call(null, data);
         }
     }
 }

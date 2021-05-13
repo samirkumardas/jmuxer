@@ -12,17 +12,19 @@
     <video style="border: 1px solid #333; max-width: 500px;" controls autoplay poster="images/loader-thumb.jpg" id="player"></video>
 </div>
 <script>
-
+var jmuxer;
 window.onload = function() {
     var socketURL = 'ws://localhost:8080';
-    var jmuxer = new JMuxer({
+    jmuxer = new JMuxer({
         node: 'player',
         mode: 'video',
         flushingTime: 1000,
         fps: 30,
         debug: true,
         onError: function(data) {
-            console.log('Buffer error encountered', data);
+            if (/Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor)) {
+                jmuxer.reset();
+            }
         }
      });
 
@@ -40,6 +42,6 @@ window.onload = function() {
  }
  
 </script>
-<script type="text/javascript" src="jmuxer1.min.js"></script>
+<script type="text/javascript" src="jmuxer.min.js"></script>
 </body>
 </html>

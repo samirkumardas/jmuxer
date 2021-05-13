@@ -229,7 +229,6 @@ export class H264Parser {
     constructor(remuxer) {
         this.remuxer = remuxer;
         this.track = remuxer.mp4track;
-        this.isSafari = remuxer.env == 'browser' && /Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor);
     }
 
     parseSPS(sps) {
@@ -279,9 +278,7 @@ export class H264Parser {
                         this.remuxer.readyToDecode = true;
                     }
                 }
-                if (!this.isSafari) {
-                    push = true;
-                }
+                push = true;
                 break;
             case NALU.AUD:
                 debug.log('AUD - ignoing');

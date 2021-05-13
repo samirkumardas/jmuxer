@@ -4,12 +4,11 @@ import { BaseRemuxer } from './base.js';
 
 export class AACRemuxer extends BaseRemuxer {
 
-    constructor(timescale, env) {
+    constructor(timescale) {
         super();
         this.readyToDecode = false;
         this.nextDts = 0;
         this.dts = 0;
-        this.env = env;
         this.mp4track = {
             id: BaseRemuxer.getTrackID(),
             type: 'audio',
@@ -22,7 +21,6 @@ export class AACRemuxer extends BaseRemuxer {
             config: '',
             codec: '',
         };
-
         this.samples = [];
         this.aac = new AACParser(this);
     }
@@ -33,6 +31,8 @@ export class AACRemuxer extends BaseRemuxer {
         this.mp4track.channelCount = '';
         this.mp4track.config = '';
         this.mp4track.timescale = this.timescale;
+        this.nextDts = 0;
+        this.dts = 0;
     }
 
     remux(frames) {
