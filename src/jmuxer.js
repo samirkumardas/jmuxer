@@ -49,7 +49,10 @@ export default class JMuxer extends Event {
             this.remuxController.on('ready', this.createBuffer.bind(this));
             this.initBrowser();
         }
-        this.startInterval();
+        if(this.options.flushingTime !== 0){
+            this.startInterval();
+        }
+
     }
 
     initBrowser() {
@@ -345,6 +348,12 @@ export default class JMuxer extends Event {
             }
         } else if(this.stream) {
             this.stream.push(data.payload);
+        }
+        if(this.options.flushingTime === 0){
+            if (this.bufferControllers) {
+                this.releaseBuffer();
+                this.clearBuffer();
+            }
         }
     }
 
