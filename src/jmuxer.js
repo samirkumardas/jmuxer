@@ -15,6 +15,7 @@ export default class JMuxer extends Event {
 
     constructor(options) {
         super('jmuxer');
+        this.isReset = false;
         let defaults = {
             node: '',
             mode: 'both', // both, audio, video
@@ -37,11 +38,8 @@ export default class JMuxer extends Event {
         this.frameDuration = (1000 / this.options.fps) | 0;
         this.remuxController = new RemuxController(this.env);
         this.remuxController.addTrack(this.options.mode);
-        this.lastCleaningTime = Date.now();
-        this.kfPosition = [];
-        this.kfCounter  = 0;
-        this.pendingUnits = {};
-        this.remainingData = new Uint8Array();
+
+        this.initData();
 
         /* events callback */
         this.remuxController.on('buffer', this.onBuffer.bind(this));
@@ -53,6 +51,13 @@ export default class JMuxer extends Event {
             this.startInterval();
         }
 
+    }
+    initData(){
+        this.lastCleaningTime = Date.now();
+        this.kfPosition = [];
+        this.kfCounter  = 0;
+        this.pendingUnits = {};
+        this.remainingData = new Uint8Array();
     }
 
     initBrowser() {
@@ -113,7 +118,6 @@ export default class JMuxer extends Event {
     feed(data) {
         let remux = false,
             slices,
-            left,
             duration,
             chunks = {
                 video: [],
@@ -123,13 +127,11 @@ export default class JMuxer extends Event {
         if (!data || !this.remuxController) return;
         duration = data.duration ? parseInt(data.duration) : 0;
         if (data.video) {
-            data.video = appendByteArray(this.remainingData, data.video);
-            [slices, left] = H264Parser.extractNALu(data.video);
+            slices = H264Parser.extractNALu(data.video);
             if (slices.length > 0) {
                 chunks.video = this.getVideoFrames(slices, duration);
                 remux = true;
             }
-            this.remainingData = left || new Uint8Array();
         }
         if (data.audio) {
             slices = AACParser.extractAAC(data.audio);
@@ -192,7 +194,9 @@ export default class JMuxer extends Event {
                 });
             } else {
                 let last = frames.length - 1;
-                frames[last].units = frames[last].units.concat(units);
+                if(last >= 0){
+                    frames[last].units = frames[last].units.concat(units);
+                }
             }
         }
         fd = duration ? duration / frames.length | 0 : this.frameDuration;
@@ -258,6 +262,7 @@ export default class JMuxer extends Event {
     }
 
     reset() {
+        this.isReset = true;
         this.node.pause();
         if (this.remuxController) {
             this.remuxController.reset();
@@ -269,6 +274,7 @@ export default class JMuxer extends Event {
             this.bufferControllers = null;
             this.endMSE();
         }
+        this.initData();
         if (this.env == 'browser') {
             this.initBrowser();
         }
@@ -360,11 +366,11 @@ export default class JMuxer extends Event {
     /* Events on MSE */
     onMSEOpen() {
         this.mseReady = true;
-        if (typeof this.options.onReady === 'function') {
-            this.options.onReady.call(null);
-        }
         URL.revokeObjectURL(this.url);
-        this.createBuffer();
+        // this.createBuffer();
+        if (typeof this.options.onReady === 'function') {
+            this.options.onReady.call(null, this.isReset);
+        }
     }
 
     onMSEClose() {
