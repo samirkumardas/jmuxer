@@ -19,7 +19,7 @@ export default class JMuxer extends Event {
         let defaults = {
             node: '',
             mode: 'both', // both, audio, video
-            flushingTime: 1500,
+            flushingTime: 0,
             clearBuffer: true,
             fps: 30,
             debug: false,
