@@ -1,6 +1,6 @@
 import * as debug from './util/debug';
 import { NALU } from './util/nalu.js';
-import { appendByteArray } from './util/utils.js';
+//  import { appendByteArray } from './util/utils.js';
 import { H264Parser } from './parsers/h264.js';
 import { AACParser } from './parsers/aac.js';
 import Event from './util/event';
@@ -25,6 +25,7 @@ export default class JMuxer extends Event {
             debug: false,
             onReady: function() {}, // function called when MSE is ready to accept frames
             onError: function() {}, // function called when jmuxer encounters any buffer related error
+            maxDelay: 500,
         };
         this.options = Object.assign({}, defaults, options);
         this.env = typeof process === 'object' && typeof window === 'undefined' ? 'node' : 'browser';
@@ -40,17 +41,12 @@ export default class JMuxer extends Event {
         this.remuxController.addTrack(this.options.mode);
 
         this.initData();
-
         /* events callback */
         this.remuxController.on('buffer', this.onBuffer.bind(this));
         if (this.env == 'browser') {
             this.remuxController.on('ready', this.createBuffer.bind(this));
             this.initBrowser();
         }
-        if(this.options.flushingTime !== 0){
-            this.startInterval();
-        }
-
     }
     initData(){
         this.lastCleaningTime = Date.now();
@@ -58,6 +54,11 @@ export default class JMuxer extends Event {
         this.kfCounter  = 0;
         this.pendingUnits = {};
         this.remainingData = new Uint8Array();
+        if(this.options.flushingTime !== 0){
+            this.startInterval();
+        }else {
+            this.startSeekInterval();
+        }
     }
 
     initBrowser() {
@@ -262,6 +263,7 @@ export default class JMuxer extends Event {
     }
 
     reset() {
+        this.stopInterval();
         this.isReset = true;
         this.node.pause();
         if (this.remuxController) {
@@ -304,10 +306,28 @@ export default class JMuxer extends Event {
             }
         }, this.options.flushingTime);
     }
-
+    startSeekInterval(){
+        this.seekInterval = setInterval(()=>{
+            if (this.bufferControllers) {
+                this.cancelDelay();
+            }
+        }, 1000);
+    }
     stopInterval() {
         if (this.interval) {
             clearInterval(this.interval);
+        }
+        if(this.seekInterval){
+            clearInterval(this.seekInterval);
+        }
+    }
+    cancelDelay(){
+        if (this.options.node.buffered.length > 0 && !this.options.node.seeking) {
+            const end = this.options.node.buffered.end(0);
+            if (end - this.options.node.currentTime > (this.options.maxDelay / 1000)) {
+                console.log('delay', this.delay++);
+                this.options.node.currentTime = end - 0.001;
+            }
         }
     }
 
