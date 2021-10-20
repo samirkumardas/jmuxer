@@ -14,7 +14,7 @@ Live Demo
 
 How to use?
 -------
-   a distribution version is available on dist folder.
+   A distribution version is available on dist folder.
    
 ```html
   <script type="text/javascript" src="dist/jmuxer.min.js"></script>
@@ -24,15 +24,19 @@ How to use?
 
 Available options are:
 
-*node* - String ID of a video tag / Reference of the HTMLVideoElement. Required field for browsers.   
+*node* - String ID of a video tag / Reference of the HTMLVideoElement. Required field for browsers.
 
 *mode* - Available values are: both, video and audio. Default is both
 
-*flushingTime* - Buffer flushing time in seconds. Default value is 1500 miliseconds.
+*flushingTime* - Buffer flushing time in milliseconds. Default value is 1500 milliseconds.
 
-*clearBuffer* - true/false. Either it will clear played media buffer automatically or not. Default is true. 
+*maxDelay* - Maximum delay time in milliseconds. Default value is 500 milliseconds.
 
-*fps* - Optional value. Frame rate of the video if it is known/fixed value. It will be used to find frame duration if chunk duration is not available with provided media data. 
+*clearBuffer* - true/false. Either it will clear played media buffer automatically or not. Default is true.
+
+*fps* - Optional value. Frame rate of the video if it is known/fixed value. It will be used to find frame duration if chunk duration is not available with provided media data.
+
+*readFpsFromTrack* - true/false. Will read FPS from MP4 track data instead of using (above) fps value. Default is false.
 
 *onReady* - function. Will be called once MSE is ready.
 
@@ -55,7 +59,7 @@ Available options are:
            debug: false
        });
 
-      /* Now feed media data using feed method. audio and video is buffer data and duration is in miliseconds */
+      /* Now feed media data using feed method. audio and video is buffer data and duration is in milliseconds */
       jmuxer.feed({
          audio: audio,
          video: video,
@@ -65,13 +69,14 @@ Available options are:
    </script>
 
 ```
-Media dataObject may have folloiwng properties:
 
-*video* - h264 buffer 
+Media dataObject may have following properties:
+
+*video* - h264 buffer
 
 *audio* - AAC buffer
 
-*duration* - duration in miliseconds of the provided chunk. If duration is not provided, it will calculate frame duration wtih the provided frame rate (fps).
+*duration* - duration in milliseconds of the provided chunk. If duration is not provided, it will calculate frame duration wtih the provided frame rate (fps).
 
 **ES6 Example:**
 
@@ -88,7 +93,7 @@ const jmuxer = new JMuxer({
               debug: true
             });
             
- /* Now feed media data using feed method. audio and video is buffer data and duration is in miliseconds */
+ /* Now feed media data using feed method. audio and video is buffer data and duration is in milliseconds */
  jmuxer.feed({
       audio: audio,
       video: video,
@@ -101,7 +106,7 @@ const jmuxer = new JMuxer({
 
 Install module through `npm`
 
-    npm install --save-dev jmuxer
+    npm install --save jmuxer
 
 ```js
 
@@ -159,9 +164,9 @@ A simple node server and some demo media data are available in the example direc
 
 A step guideline to obtain above the packet format from your mp4 file using ffmpeg:
 1. Spliting video into 2 seconds chunks: `ffmpeg -i input.mp4 -c copy -map 0 -segment_time 2 -f segment %03d.mp4`
-1. Extracting h264 for all chunks: `for f in *.mp4; do ffmpeg -i "$f" -vcodec copy -an -bsf:v h264_mp4toannexb "${f:0:3}.h264"; done`
-1. Extracting audio for all chunks: `for f in *.mp4; do ffmpeg -i "$f" -acodec copy -vn "${f:0:3}.aac"; done`
-1. Extracting duration for all chunks: `for f in *.mp4; do ffprobe "$f" -show_format 2>&1 | sed -n 's/duration=//p'; done`
+2. Extracting h264 for all chunks: `for f in *.mp4; do ffmpeg -i "$f" -vcodec copy -an -bsf:v h264_mp4toannexb "${f:0:3}.h264"; done`
+3. Extracting audio for all chunks: `for f in *.mp4; do ffmpeg -i "$f" -acodec copy -vn "${f:0:3}.aac"; done`
+4. Extracting duration for all chunks: `for f in *.mp4; do ffprobe "$f" -show_format 2>&1 | sed -n 's/duration=//p'; done`
 
 (see https://github.com/samirkumardas/jmuxer/issues/20#issuecomment-470855007)
 
