@@ -10,6 +10,12 @@ export class ExpGolomb {
         this.bitLength = data.byteLength * 8;
     }
 
+    setData(data) {
+        this.data = data;
+        this.index = 0;
+        this.bitLength = data.byteLength * 8;
+    }
+
     get bitsAvailable() {
         return this.bitLength - this.index;
     }

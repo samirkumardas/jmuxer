@@ -16,6 +16,7 @@ export class H264Remuxer extends BaseRemuxer {
             fragmented: true,
             sps: '',
             pps: '',
+            fps: 30,
             width: 0,
             height: 0,
             timescale: timescale,
@@ -100,7 +101,7 @@ export class H264Remuxer extends BaseRemuxer {
         }
 
         if (!samples.length) return null;
-        
+
         return new Uint8Array(payload.buffer, 0, this.mp4track.len);
     }
 }

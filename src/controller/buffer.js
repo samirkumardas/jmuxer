@@ -50,44 +50,57 @@ export default class BufferController extends Event {
     }
 
     initCleanup(cleanMaxLimit) {
-        if (this.sourceBuffer.updating) {
-            this.pendingCleaning = cleanMaxLimit;
-            return;
-        }
-        if (this.sourceBuffer.buffered && this.sourceBuffer.buffered.length && !this.cleaning) {
-            for (let i = 0; i < this.sourceBuffer.buffered.length; ++i) {
-                let start = this.sourceBuffer.buffered.start(i);
-                let end = this.sourceBuffer.buffered.end(i);
+        try {
+            if (this.sourceBuffer.updating) {
+                this.pendingCleaning = cleanMaxLimit;
+                return;
+            }
+            if (this.sourceBuffer.buffered && this.sourceBuffer.buffered.length && !this.cleaning) {
+                for (let i = 0; i < this.sourceBuffer.buffered.length; ++i) {
+                    let start = this.sourceBuffer.buffered.start(i);
+                    let end = this.sourceBuffer.buffered.end(i);
 
-                if ((cleanMaxLimit - start) > this.cleanOffset) {
-                    end = cleanMaxLimit - this.cleanOffset;
-                    if (start < end) {
-                        this.cleanRanges.push([start, end]);
+                    if ((cleanMaxLimit - start) > this.cleanOffset) {
+                        end = cleanMaxLimit - this.cleanOffset;
+                        if (start < end) {
+                            this.cleanRanges.push([start, end]);
+                        }
                     }
                 }
+                this.doCleanup();
             }
-            this.doCleanup();
+        } catch (e) {
+            debug.error(`Error occured while cleaning ${this.type} buffer - ${e.name}: ${e.message}`);
+            if (e.name == 'InvalidStateError')
+            {
+                this.sourceBuffer.appendBuffer(this.queue);
+                this.queue = new Uint8Array();
+            }
         }
     }
 
     doAppend() {
         if (!this.queue.length) return;
 
-        if (this.sourceBuffer.updating) {
-            return;
-        }
+        if (!this.sourceBuffer || this.sourceBuffer.updating) return;
 
         try {
             this.sourceBuffer.appendBuffer(this.queue);
             this.queue = new Uint8Array();
         } catch (e) {
+            let name = 'unexpectedError';
             if (e.name === 'QuotaExceededError') {
                 debug.log(`${this.type} buffer quota full`);
-                this.dispatch('error', { type: this.type, name: 'QuotaExceeded', error: 'buffer error' });
-                return;
+                name = 'QuotaExceeded';
+            } else {
+                debug.error(`Error occured while appending ${this.type} buffer - ${e.name}: ${e.message}`);
+                if (e.name == 'InvalidStateError')
+                {
+                    this.destroy();
+                    return;
+                }
             }
-            debug.error(`Error occured while appending ${this.type} buffer -  ${e.name}: ${e.message}`);
-            this.dispatch('error', { type: this.type, name: 'unexpectedError', error: 'buffer error' });
+            this.dispatch('error', { type: this.type, name: name, error: 'buffer error' });
         }
     }
 

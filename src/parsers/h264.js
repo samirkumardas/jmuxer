@@ -98,8 +98,30 @@ export class H264Parser {
             picWidthInMbsMinus1,
             picHeightInMapUnitsMinus1,
             frameMbsOnlyFlag,
-            scalingListCount;
-        decoder.readUByte();
+            scalingListCount,
+            fps = 0;
+        decoder.readUByte(); // skip NAL header
+
+        // rewrite NAL
+        let rbsp = [],
+            hdr_bytes = 1,
+            nal_bytes = data.byteLength;
+        for (let i = hdr_bytes; i < nal_bytes; i ++) {
+            if ((i + 2) < nal_bytes && decoder.readBits(24, false) === 0x000003) {
+                rbsp.push(decoder.readBits(8));
+                rbsp.push(decoder.readBits(8));
+                i += 2;
+
+                // emulation_prevention_three_byte
+                decoder.readBits(8);
+            }
+            else {
+                rbsp.push(decoder.readBits(8));
+            }
+        }
+        decoder.setData(new Uint8Array(rbsp));
+        // end of rewrite data
+
         profileIdc = decoder.readUByte(); // profile_idc
         profileCompat = decoder.readBits(5); // constraint_set[0-4]_flag, u(5)
         decoder.skipBits(3); // reserved_zero_3bits u(3),
@@ -191,7 +213,7 @@ export class H264Parser {
                         break;
                     }
                 }
-                if (sarRatio) {
+                if (sarRatio && sarRatio[0] > 0 && sarRatio[1] > 0) {
                     sarScale = sarRatio[0] / sarRatio[1];
                 }
             }
@@ -212,9 +234,14 @@ export class H264Parser {
                 let timeScale = decoder.readUInt();
                 let fixedFrameRate = decoder.readBoolean();
                 let frameDuration = timeScale / (2 * unitsInTick);
+
+                if (fixedFrameRate) {
+                    fps = frameDuration;
+                }
             }
         }
         return {
+            fps: fps > 0 ? fps : undefined,
             width: Math.ceil((((picWidthInMbsMinus1 + 1) * 16) - frameCropLeftOffset * 2 - frameCropRightOffset * 2) * sarScale),
             height: ((2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16) - ((frameMbsOnlyFlag ? 2 : 4) * (frameCropTopOffset + frameCropBottomOffset)),
         };
@@ -234,6 +261,7 @@ export class H264Parser {
     parseSPS(sps) {
         var config = H264Parser.readSPS(new Uint8Array(sps));
 
+        this.track.fps = config.fps;
         this.track.width = config.width;
         this.track.height = config.height;
         this.track.sps = [new Uint8Array(sps)];
