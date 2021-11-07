@@ -71,11 +71,6 @@ export default class BufferController extends Event {
             }
         } catch (e) {
             debug.error(`Error occured while cleaning ${this.type} buffer - ${e.name}: ${e.message}`);
-            if (e.name == 'InvalidStateError')
-            {
-                this.sourceBuffer.appendBuffer(this.queue);
-                this.queue = new Uint8Array();
-            }
         }
     }
 
@@ -94,11 +89,7 @@ export default class BufferController extends Event {
                 name = 'QuotaExceeded';
             } else {
                 debug.error(`Error occured while appending ${this.type} buffer - ${e.name}: ${e.message}`);
-                if (e.name == 'InvalidStateError')
-                {
-                    this.destroy();
-                    return;
-                }
+                name = 'InvalidStateError';
             }
             this.dispatch('error', { type: this.type, name: name, error: 'buffer error' });
         }

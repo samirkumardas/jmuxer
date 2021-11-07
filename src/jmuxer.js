@@ -427,10 +427,8 @@ export default class JMuxer extends Event {
             return;
         }
         else if (data.name == 'InvalidStateError') {
-            debug.log('JMuxer clearing all buffers due to InvalidStateError');
-            this.releaseBuffer();
-            this.clearBuffer();
-            return;
+            debug.log('JMuxer is reseting due to InvalidStateError');
+            this.reset();
         }
         else {
             this.endMSE();
