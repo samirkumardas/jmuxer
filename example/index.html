@@ -36,6 +36,7 @@
     var jmuxer = new JMuxer({
         node: 'player',
         debug: true,
+        flushingTime: 0,
         onError: function(data) {
             console.log('Buffer error encountered', data);
         }

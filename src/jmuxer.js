@@ -57,11 +57,7 @@ export default class JMuxer extends Event {
         this.kfCounter = 0;
         this.pendingUnits = {};
         this.remainingData = new Uint8Array();
-        if (this.options.flushingTime !== 0) {
-            this.startInterval();
-        } else {
-            this.startSeekInterval();
-        }
+        this.startInterval();
     }
 
     initBrowser() {
@@ -314,27 +310,17 @@ export default class JMuxer extends Event {
 
     startInterval() {
         this.interval = setInterval(() => {
-            if (this.bufferControllers) {
-                this.releaseBuffer();
-                this.clearBuffer();
-            }
-        }, this.options.flushingTime);
-    }
-
-    startSeekInterval() {
-        this.seekInterval = setInterval(() => {
-            if (this.bufferControllers) {
+            if (this.options.flushingTime) {
+                this.applyAndClearBuffer();
+            } else if (this.bufferControllers) {
                 this.cancelDelay();
             }
-        }, 1000);
+        }, this.options.flushingTime || 1000);
     }
 
     stopInterval() {
         if (this.interval) {
             clearInterval(this.interval);
-        }
-        if (this.seekInterval) {
-            clearInterval(this.seekInterval);
         }
     }
 
@@ -351,6 +337,13 @@ export default class JMuxer extends Event {
     releaseBuffer() {
         for (let type in this.bufferControllers) {
             this.bufferControllers[type].doAppend();
+        }
+    }
+
+    applyAndClearBuffer() {
+        if (this.bufferControllers) {
+            this.releaseBuffer();
+            this.clearBuffer();
         }
     }
 
@@ -398,10 +391,7 @@ export default class JMuxer extends Event {
             this.stream.push(data.payload);
         }
         if (this.options.flushingTime === 0) {
-            if (this.bufferControllers) {
-                this.releaseBuffer();
-                this.clearBuffer();
-            }
+            this.applyAndClearBuffer();
         }
     }
 
