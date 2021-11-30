@@ -325,11 +325,11 @@ export default class JMuxer extends Event {
     }
 
     cancelDelay() {
-        if (this.options.node.buffered && this.options.node.buffered.length > 0 && !this.options.node.seeking) {
-            const end = this.options.node.buffered.end(0);
-            if (end - this.options.node.currentTime > (this.options.maxDelay / 1000)) {
-                console.log('delay', this.delay++);
-                this.options.node.currentTime = end - 0.001;
+        if (this.node.buffered && this.node.buffered.length > 0 && !this.node.seeking) {
+            const end = this.node.buffered.end(0);
+            if (end - this.node.currentTime > (this.options.maxDelay / 1000)) {
+                console.log('delay');
+                this.node.currentTime = end - 0.001;
             }
         }
     }
