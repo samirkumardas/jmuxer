@@ -36,7 +36,7 @@
     var jmuxer = new JMuxer({
         node: 'player',
         debug: true,
-        flushingTime: 0,
+        flushingTime: 1000, // we need 1000 for the demo as server provides a chunk data of 1000ms at a time
         onError: function(data) {
             console.log('Buffer error encountered', data);
         }

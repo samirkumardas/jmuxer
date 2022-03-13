@@ -19,11 +19,11 @@ export default class JMuxer extends Event {
         let defaults = {
             node: '',
             mode: 'both', // both, audio, video
-            flushingTime: 1500,
+            flushingTime: 500,
             maxDelay: 500,
             clearBuffer: true,
             fps: 30,
-            readFpsFromTrack: false, // defaults to false to keep existing functionality
+            readFpsFromTrack: false, // set true to fetch fps value from NALu
             debug: false,
             onReady: function() {}, // function called when MSE is ready to accept frames
             onError: function() {}, // function called when jmuxer encounters any buffer related error

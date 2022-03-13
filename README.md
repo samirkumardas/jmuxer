@@ -28,7 +28,7 @@ Available options are:
 
 *mode* - Available values are: both, video and audio. Default is both
 
-*flushingTime* - Buffer flushing time in milliseconds. Default value is 1500 milliseconds.
+*flushingTime* - Buffer flushing time in milliseconds. Default value is 500 milliseconds. Set `flushingTime` to 0 if you want to flash buffer immediately or find any lag.
 
 *maxDelay* - Maximum delay time in milliseconds. Default value is 500 milliseconds.
 
