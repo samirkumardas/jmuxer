@@ -1,6 +1,6 @@
 {
   "name": "jmuxer",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "jMuxer - a simple javascript mp4 muxer for non-standard streaming communications protocol",
   "main": "dist/jmuxer.min.js",
   "scripts": {
