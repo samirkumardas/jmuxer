@@ -142,7 +142,7 @@ export default class JMuxer extends Event {
             }
         }
         if (data.audio) {
-            slices = AACParser.extractAAC(data.audio);
+            slices = this.remuxController.aacParser.extractAAC(data.audio);
             if (slices.length > 0) {
                 chunks.audio = this.getAudioFrames(slices, duration);
                 remux = true;

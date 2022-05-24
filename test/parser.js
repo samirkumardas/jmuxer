@@ -1,5 +1,6 @@
 //import { assert } from 'chai';
 
+import { BaseRemuxer } from '../src/remuxer/base.js';
 import { H264Parser } from '../src/parsers/h264.js';
 import { AACParser } from '../src/parsers/aac.js';
 
@@ -25,9 +26,10 @@ describe('Parser tests --', function() {
       it('AAC frame length should be 284', function() {
          assert.equal(AACParser.getFrameLength(aac), 284); 
       });
-
+      
       it('Number of extracted AAC frames should be 1', function() {
-         var result = AACParser.extractAAC(aac);
+         const parser = new AACParser(new BaseRemuxer());
+         var result = parser.extractAAC(aac);
          assert.equal(result.length, 1); 
       });
 });
