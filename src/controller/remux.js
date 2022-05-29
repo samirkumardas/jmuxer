@@ -16,6 +16,7 @@ export default class RemuxController extends Event {
         this.env = env;
         this.timescale = 1000;
         this.mediaDuration = 0;
+        this.aacParser = null;
     }
 
     addTrack(type) {
@@ -24,7 +25,9 @@ export default class RemuxController extends Event {
             this.trackTypes.push('video');
         }
         if (type === 'audio' || type === 'both') {
-            this.tracks.audio = new AACRemuxer(this.timescale);
+            const aacRemuxer = new AACRemuxer(this.timescale);
+            this.aacParser = aacRemuxer.getAacParser();
+            this.tracks.audio = aacRemuxer;
             this.trackTypes.push('audio');
         }
     }

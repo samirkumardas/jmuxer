@@ -102,4 +102,8 @@ export class AACRemuxer extends BaseRemuxer {
 
         return new Uint8Array(payload.buffer, 0, this.mp4track.len);
     }
+
+    getAacParser() {
+        return this.aac;
+    }
 }
