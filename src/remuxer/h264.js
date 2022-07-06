@@ -52,6 +52,7 @@ export class H264Remuxer extends BaseRemuxer {
                     size: size,
                     keyFrame: frame.keyFrame,
                     duration: frame.duration,
+                    compositionTimeOffset: frame.compositionTimeOffset
                 });
             }
         }
@@ -82,7 +83,7 @@ export class H264Remuxer extends BaseRemuxer {
             mp4Sample = {
                 size: sample.size,
                 duration: duration,
-                cts: 0,
+                cts: sample.compositionTimeOffset || 0,
                 flags: {
                     isLeading: 0,
                     isDependedOn: 0,
