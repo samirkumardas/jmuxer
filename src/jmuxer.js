@@ -134,7 +134,7 @@ export default class JMuxer extends Event {
             this.remainingData = left || new Uint8Array();
 
             if (slices.length > 0) {
-                chunks.video = this.getVideoFrames(slices, duration);
+                chunks.video = this.getVideoFrames(slices, duration, data.compositionTimeOffset);
                 remux = true;
             } else {
                 debug.error('Failed to extract any NAL units from video data:', left);
@@ -158,7 +158,7 @@ export default class JMuxer extends Event {
         this.remuxController.remux(chunks);
     }
 
-    getVideoFrames(nalus, duration) {
+    getVideoFrames(nalus, duration, compositionTimeOffset) {
         let units = [],
             frames = [],
             fd = 0,
@@ -215,6 +215,7 @@ export default class JMuxer extends Event {
 
         frames.map((frame) => {
             frame.duration = fd;
+            frame.compositionTimeOffset = compositionTimeOffset;
             if (tt > 0) {
                 frame.duration++;
                 tt--;

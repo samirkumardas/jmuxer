@@ -1864,7 +1864,8 @@
                 units: units,
                 size: size,
                 keyFrame: frame.keyFrame,
-                duration: frame.duration
+                duration: frame.duration,
+                compositionTimeOffset: frame.compositionTimeOffset
               });
             }
           }
@@ -1902,7 +1903,7 @@
           mp4Sample = {
             size: sample.size,
             duration: duration,
-            cts: 0,
+            cts: sample.compositionTimeOffset || 0,
             flags: {
               isLeading: 0,
               isDependedOn: 0,
@@ -2425,7 +2426,7 @@
           this.remainingData = left || new Uint8Array();
 
           if (slices.length > 0) {
-            chunks.video = this.getVideoFrames(slices, duration);
+            chunks.video = this.getVideoFrames(slices, duration, data.compositionTimeOffset);
             remux = true;
           } else {
             error('Failed to extract any NAL units from video data:', left);
@@ -2454,7 +2455,7 @@
       }
     }, {
       key: "getVideoFrames",
-      value: function getVideoFrames(nalus, duration) {
+      value: function getVideoFrames(nalus, duration, compositionTimeOffset) {
         var _this2 = this;
 
         var units = [],
@@ -2529,6 +2530,7 @@
         tt = duration ? duration - fd * frames.length : 0;
         frames.map(function (frame) {
           frame.duration = fd;
+          frame.compositionTimeOffset = compositionTimeOffset;
 
           if (tt > 0) {
             frame.duration++;

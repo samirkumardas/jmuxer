@@ -15,10 +15,10 @@ Live Demo
 How to use?
 -------
    A distribution version is available on dist folder.
-   
+
 ```html
   <script type="text/javascript" src="dist/jmuxer.min.js"></script>
-  
+
   var jmuxer = new JMuxer(option);
 ```
 
@@ -47,11 +47,11 @@ Available options are:
 **Complete example:**
 
 ```html
-   
+
    <script type="text/javascript" src="dist/jmuxer.min.js"></script>
-   
+
    <video id="player"></video>
-   
+
    <script>
        var jmuxer = new JMuxer({
            node: 'player',
@@ -65,7 +65,7 @@ Available options are:
          video: video,
          duration: duration
        });
-   
+
    </script>
 
 ```
@@ -77,6 +77,8 @@ Media dataObject may have following properties:
 *audio* - AAC buffer
 
 *duration* - duration in milliseconds of the provided chunk. If duration is not provided, it will calculate frame duration wtih the provided frame rate (fps).
+
+*compositionTimeOffset* - Composition time offset, difference between decode time and presentation time of frames, in milliseconds. This is only used for video and usually needed when B-frames are present in video stream.
 
 **ES6 Example:**
 
@@ -92,7 +94,7 @@ const jmuxer = new JMuxer({
               node: 'player',
               debug: true
             });
-            
+
  /* Now feed media data using feed method. audio and video is buffer data and duration is in milliseconds */
  jmuxer.feed({
       audio: audio,
@@ -115,7 +117,7 @@ const jmuxer = new JMuxer({
     debug: true
 });
 
-/* 
+/*
 Stream in Object mode. Please check the example file for more details
 */
 let h264_feeder = getFeederStreamSomehow();
@@ -135,12 +137,12 @@ h264_feeder.pipe(jmuxer.createStream()).pipe(http_or_ws_or_any);
 
  **Typescript definition**
 
- 
+
     npm install --save @types/jmuxer
 
-  
+
  **Compatibility**
- 
+
  compatible with browsers supporting MSE with 'video/MP4. it is supported on:
 
  * Chrome for Android 34+
