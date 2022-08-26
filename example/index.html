@@ -39,6 +39,12 @@
         flushingTime: 1000, // we need 1000 for the demo as server provides a chunk data of 1000ms at a time
         onError: function(data) {
             console.log('Buffer error encountered', data);
+        },
+        onVideoFeedError: function (data) {
+            console.log('Video feeding error encountered', data);
+        },
+        onAudioFeedError: function (data) {
+            console.log('Audio feeding error encountered', data);
         }
      });
 

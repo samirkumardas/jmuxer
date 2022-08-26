@@ -26,7 +26,9 @@ export default class JMuxer extends Event {
             readFpsFromTrack: false, // set true to fetch fps value from NALu
             debug: false,
             onReady: function() {}, // function called when MSE is ready to accept frames
-            onError: function() {}, // function called when jmuxer encounters any buffer related error
+            onError: function() {}, // function called when jmuxer encounters any buffer related errors
+            onVideoFeedError: function () {}, // function called when jmuxer encounters any video feeding related errors
+            onAudioFeedError: function () {}, // function called when jmuxer encounters any audio feeding related errors
         };
         this.options = Object.assign({}, defaults, options);
         this.env = typeof process === 'object' && typeof window === 'undefined' ? 'node' : 'browser';
@@ -138,6 +140,9 @@ export default class JMuxer extends Event {
                 remux = true;
             } else {
                 debug.error('Failed to extract any NAL units from video data:', left);
+                if (typeof this.options.onVideoFeedError === 'function') {
+                    this.options.onVideoFeedError.call(null, data);
+                }
                 return;
             }
         }
@@ -148,6 +153,9 @@ export default class JMuxer extends Event {
                 remux = true;
             } else {
                 debug.error('Failed to extract audio data from:', data.audio);
+                if (typeof this.options.onAudioFeedError === 'function') {
+                    this.options.onAudioFeedError.call(null, data);
+                }
                 return;
             }
         }
