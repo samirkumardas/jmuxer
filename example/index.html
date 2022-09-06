@@ -40,11 +40,11 @@
         onError: function(data) {
             console.log('Buffer error encountered', data);
         },
-        onVideoFeedError: function (data) {
-            console.log('Video feeding error encountered', data);
+        onMissingVideoFrames: function (data) {
+            console.log('Video frames missing', data);
         },
-        onAudioFeedError: function (data) {
-            console.log('Audio feeding error encountered', data);
+        onMissingAudioFrames: function (data) {
+            console.log('Audio frames missing', data);
         }
      });
 

@@ -42,9 +42,9 @@ Available options are:
 
 *onError* - function. Will be fired if jMuxer encounters any buffer related errors.
 
-*onVideoFeedError* - function. Will be fired if jMuxer encounters any video feeding related errors.
+*onMissingVideoFrames* - function. Will be fired if jMuxer encounters any missing video frames.
 
-*onAudioFeedError* - function. Will be fired if jMuxer encounters any audio feeding related errors.
+*onMissingAudioFrames* - function. Will be fired if jMuxer encounters any missing audio frames.
 
 *debug* - true/false. Will print debug log in browser console. Default is false.
 
