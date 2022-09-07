@@ -40,7 +40,11 @@ Available options are:
 
 *onReady* - function. Will be called once MSE is ready.
 
-*onError* - function. Will be fired if jMuxer encounters any buffer error.
+*onError* - function. Will be fired if jMuxer encounters any buffer related errors.
+
+*onMissingVideoFrames* - function. Will be fired if jMuxer encounters any missing video frames.
+
+*onMissingAudioFrames* - function. Will be fired if jMuxer encounters any missing audio frames.
 
 *debug* - true/false. Will print debug log in browser console. Default is false.
 
