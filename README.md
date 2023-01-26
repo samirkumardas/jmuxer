@@ -206,7 +206,7 @@ A distribution version is available inside *dist* directory. However, if you nee
 
 Support
 -----------
-If the project helps you, [buy me a cup of coffee!](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&currency_code=USD&business=payment2ocm@gmail.com&item_name=donation%20for%20jMuxer)
+If the project helps you, [buy me a cup of coffee!](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&currency_code=USD&business=samir@ascendtechnologies.net&item_name=donation%20for%20jMuxer)
 
 Credits
 -----------
