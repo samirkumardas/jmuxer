@@ -1,5 +1,5 @@
 [![Build Status](https://travis-ci.org/samirkumardas/jmuxer.svg?branch=master)](https://travis-ci.org/samirkumardas/jmuxer)
-![Maintenance](https://img.shields.io/maintenance/yes/2022.svg)
+![Maintenance](https://img.shields.io/maintenance/yes/2023.svg)
 ![license](https://img.shields.io/github/license/mashape/apistatus.svg)
 
 jMuxer
