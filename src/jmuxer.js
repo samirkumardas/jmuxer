@@ -91,14 +91,29 @@ export default class JMuxer extends Event {
     }
 
     setupMSE() {
-        window.MediaSource = window.MediaSource || window.WebKitMediaSource;
+        window.MediaSource = window.MediaSource || window.WebKitMediaSource || window.ManagedMediaSource;
         if (!window.MediaSource) {
-            throw 'Oops! Browser does not support media source extension.';
+            throw 'Oops! Browser does not support Media Source Extension or Managed Media Source (IOS 17+).';
         }
         this.isMSESupported = !!window.MediaSource;
-        this.mediaSource = new MediaSource();
+        this.mediaSource = new window.MediaSource();
         this.url = URL.createObjectURL(this.mediaSource);
-        this.node.src = this.url;
+        if(window.MediaSource === window.ManagedMediaSource) {
+            try {
+                this.node.removeAttribute('src');
+                // ManagedMediaSource will not open without disableRemotePlayback set to false or source alternatives
+                this.node.disableRemotePlayback = true;
+                const source = document.createElement('source');
+                source.type = 'video/mp4';
+                source.src = this.url;
+                this.node.appendChild(source);
+                this.node.load();
+            } catch (error) {
+                this.node.src = this.url;
+            }
+        } else {
+            this.node.src = this.url;
+        }
         this.mseEnded = false;
         this.mediaSource.addEventListener('sourceopen', this.onMSEOpen.bind(this));
         this.mediaSource.addEventListener('sourceclose', this.onMSEClose.bind(this));
