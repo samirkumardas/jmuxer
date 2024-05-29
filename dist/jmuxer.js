@@ -2295,7 +2295,11 @@
         debug: false,
         onReady: function onReady() {},
         // function called when MSE is ready to accept frames
-        onError: function onError() {} // function called when jmuxer encounters any buffer related error
+        onError: function onError() {},
+        // function called when jmuxer encounters any buffer related errors
+        onMissingVideoFrames: function onMissingVideoFrames() {},
+        // function called when jmuxer encounters any missing video frames
+        onMissingAudioFrames: function onMissingAudioFrames() {} // function called when jmuxer encounters any missing audio frames
 
       };
       _this.options = Object.assign({}, defaults, options);
@@ -2430,6 +2434,11 @@
             remux = true;
           } else {
             error('Failed to extract any NAL units from video data:', left);
+
+            if (typeof this.options.onMissingVideoFrames === 'function') {
+              this.options.onMissingVideoFrames.call(null, data);
+            }
+
             return;
           }
         }
@@ -2442,6 +2451,11 @@
             remux = true;
           } else {
             error('Failed to extract audio data from:', data.audio);
+
+            if (typeof this.options.onMissingAudioFrames === 'function') {
+              this.options.onMissingAudioFrames.call(null, data);
+            }
+
             return;
           }
         }
@@ -2773,7 +2787,7 @@
         URL.revokeObjectURL(this.url); // this.createBuffer();
 
         if (typeof this.options.onReady === 'function') {
-          this.options.onReady.call(null, this.isReset);
+          this.options.onReady.call(null, this.isReset, this.mediaSource);
         }
       }
     }, {
