@@ -26,6 +26,7 @@ export default class JMuxer extends Event {
             readFpsFromTrack: false, // set true to fetch fps value from NALu
             debug: false,
             onReady: function() {}, // function called when MSE is ready to accept frames
+            onData: function() {}, // function called when data is ready to be sent
             onError: function() {}, // function called when jmuxer encounters any buffer related errors
             onMissingVideoFrames: function () {}, // function called when jmuxer encounters any missing video frames
             onMissingAudioFrames: function () {}, // function called when jmuxer encounters any missing audio frames
@@ -398,6 +399,9 @@ export default class JMuxer extends Event {
             }
         } else if (this.stream) {
             this.stream.push(data.payload);
+        }
+        if (this.onData) {
+            this.onData(data.payload);
         }
         if (this.options.flushingTime === 0) {
             this.applyAndClearBuffer();

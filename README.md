@@ -40,6 +40,8 @@ Available options are:
 
 *onReady* - function. Will be called once MSE is ready.
 
+*onData* - function. Will be called when muxed data is ready to be used. First argument is the muxed data.
+
 *onError* - function. Will be fired if jMuxer encounters any buffer related errors.
 
 *onMissingVideoFrames* - function. Will be fired if jMuxer encounters any missing video frames.
@@ -127,6 +129,22 @@ Stream in Object mode. Please check the example file for more details
 let h264_feeder = getFeederStreamSomehow();
 let http_or_ws_or_any = getWritterStreamSomehow();
 h264_feeder.pipe(jmuxer.createStream()).pipe(http_or_ws_or_any);
+
+
+// OR another way
+
+const jmuxer = new JMuxer({
+	onData: function(data) {
+		res.write(data); // send data to client
+	}
+    debug: true
+});
+
+jmuxer.feed({
+	audio: audio,
+	video: video,
+	duration: duration
+}); // feed data
 
 ```
 
