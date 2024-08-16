@@ -25,11 +25,11 @@ export default class JMuxer extends Event {
             fps: 30,
             readFpsFromTrack: false, // set true to fetch fps value from NALu
             debug: false,
-            onReady: function() {}, // function called when MSE is ready to accept frames
-            onData: function() {}, // function called when data is ready to be sent
-            onError: function() {}, // function called when jmuxer encounters any buffer related errors
-            onMissingVideoFrames: function () {}, // function called when jmuxer encounters any missing video frames
-            onMissingAudioFrames: function () {}, // function called when jmuxer encounters any missing audio frames
+            onReady: function () { }, // function called when MSE is ready to accept frames
+            onData: function () { }, // function called when data is ready to be sent
+            onError: function () { }, // function called when jmuxer encounters any buffer related errors
+            onMissingVideoFrames: function () { }, // function called when jmuxer encounters any missing video frames
+            onMissingAudioFrames: function () { }, // function called when jmuxer encounters any missing audio frames
         };
         this.options = Object.assign({}, defaults, options);
         this.env = typeof process === 'object' && typeof window === 'undefined' ? 'node' : 'browser';
@@ -99,7 +99,7 @@ export default class JMuxer extends Event {
         this.isMSESupported = !!window.MediaSource;
         this.mediaSource = new window.MediaSource();
         this.url = URL.createObjectURL(this.mediaSource);
-        if(window.MediaSource === window.ManagedMediaSource) {
+        if (window.MediaSource === window.ManagedMediaSource) {
             try {
                 this.node.removeAttribute('src');
                 // ManagedMediaSource will not open without disableRemotePlayback set to false or source alternatives
@@ -415,8 +415,8 @@ export default class JMuxer extends Event {
         } else if (this.stream) {
             this.stream.push(data.payload);
         }
-        if (this.onData) {
-            this.onData(data.payload);
+        if (this.options.onData) {
+            this.options.onData(data.payload);
         }
         if (this.options.flushingTime === 0) {
             this.applyAndClearBuffer();
