@@ -1,6 +1,8 @@
 import * as debug from '../util/debug';
 
 export class AACParser {
+    static aacHeader;
+
     static get samplingRateMap() {
         return [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
     }
@@ -17,7 +19,7 @@ export class AACParser {
         return data[0] === 0xff && (data[1] & 0xf0) === 0xf0 && (data[1] & 0x06) === 0x00;
     }
 
-    extractAAC(buffer) {
+    static extractAAC(buffer) {
         let i = 0,
             length = buffer.byteLength,
             result = [],
@@ -29,8 +31,8 @@ export class AACParser {
             return result;
         }
         headerLength = AACParser.getHeaderLength(buffer);
-        if (!this.aacHeader) {
-            this.aacHeader = buffer.subarray(0, headerLength);
+        if (!AACParser.aacHeader) {
+            AACParser.aacHeader = buffer.subarray(0, headerLength);
         }
 
         while (i < length) {
@@ -52,7 +54,7 @@ export class AACParser {
             sampleIndex,
             channelCount,
             config = new Uint8Array(2),
-            headerData = this.aacHeader;
+            headerData = AACParser.aacHeader;
 
         if (!headerData) return;
             

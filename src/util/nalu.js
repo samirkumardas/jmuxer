@@ -1,5 +1,4 @@
 export class NALU {
-
     static get NDR() { return 1; }
     static get IDR() { return 5; }
     static get SEI() { return 6; }

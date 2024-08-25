@@ -10,27 +10,26 @@ var aac = new Uint8Array([255, 241, 80, 128, 35, 159, 252, 33, 10, 84, 140, 49, 
 
 describe('Parser tests --', function() {
       
-      it('Number of extracted h264 NAL unit should be 2', function() {
-         var result = H264Parser.extractNALu(h264);
-         assert.equal(result.length, 2);
-      });
+    it('Number of extracted h264 NAL unit should be 2', function() {
+        var result = H264Parser.extractNALu(h264);
+        assert.equal(result.length, 2);
+    });
 
-      it('AAC pattern should return true', function() {
-         assert.equal(AACParser.isAACPattern(aac), true); 
-      });
+    it('AAC pattern should return true', function() {
+        assert.equal(AACParser.isAACPattern(aac), true); 
+    });
 
-      it('AAC header length should be 7 since CRC not present', function() {
-         assert.equal(AACParser.getHeaderLength(aac), 7); 
-      });
+    it('AAC header length should be 7 since CRC not present', function() {
+        assert.equal(AACParser.getHeaderLength(aac), 7); 
+    });
 
-      it('AAC frame length should be 284', function() {
-         assert.equal(AACParser.getFrameLength(aac), 284); 
-      });
+    it('AAC frame length should be 284', function() {
+        assert.equal(AACParser.getFrameLength(aac), 284); 
+    });
       
-      it('Number of extracted AAC frames should be 1', function() {
-         const parser = new AACParser(new BaseRemuxer());
-         var result = parser.extractAAC(aac);
-         assert.equal(result.length, 1); 
-      });
+    it('Number of extracted AAC frames should be 1', function() {
+        var result = AACParser.extractAAC(aac);
+        assert.equal(result.length, 1); 
+    });
 });
 
