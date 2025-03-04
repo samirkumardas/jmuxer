@@ -179,9 +179,9 @@ export class MP4 {
             (timescale >> 16) & 0xFF,
             (timescale >> 8) & 0xFF,
             timescale & 0xFF, // timescale
-            (duration >> 24),
-            (duration >> 16) & 0xFF,
-            (duration >> 8) & 0xFF,
+            (duration >>> 24) & 0xFF,
+            (duration >>> 16) & 0xFF,
+            (duration >>> 8) & 0xFF,
             duration & 0xFF, // duration
             0x55, 0xc4, // 'und' language (undetermined)
             0x00, 0x00,
@@ -251,9 +251,9 @@ export class MP4 {
                 (timescale >> 16) & 0xFF,
                 (timescale >> 8) & 0xFF,
                 timescale & 0xFF, // timescale
-                (duration >> 24) & 0xFF,
-                (duration >> 16) & 0xFF,
-                (duration >> 8) & 0xFF,
+                (duration >>> 24) & 0xFF,
+                (duration >>> 16) & 0xFF,
+                (duration >>> 8) & 0xFF,
                 duration & 0xFF, // duration
                 0x00, 0x01, 0x00, 0x00, // 1.0 rate
                 0x01, 0x00, // 1.0 volume
@@ -465,9 +465,9 @@ export class MP4 {
             (id >> 8) & 0xFF,
             id & 0xFF, // track_ID
             0x00, 0x00, 0x00, 0x00, // reserved
-            (duration >> 24),
-            (duration >> 16) & 0xFF,
-            (duration >> 8) & 0xFF,
+            (duration >>> 24) & 0xFF,
+            (duration >>> 16) & 0xFF,
+            (duration >>> 8) & 0xFF,
             duration & 0xFF, // duration
             0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, // reserved

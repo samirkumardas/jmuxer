@@ -41,7 +41,7 @@ export default class JMuxer extends Event {
             this.options.fps = 30;
         }
         this.frameDuration = (1000 / this.options.fps) | 0;
-        this.remuxController = new RemuxController(this.env);
+        this.remuxController = new RemuxController(this.env, options.live);
         this.remuxController.addTrack(this.options.mode);
 
         this.initData();
