@@ -4,7 +4,7 @@ import { BaseRemuxer } from './base.js';
 
 export class AACRemuxer extends BaseRemuxer {
 
-    constructor(timescale) {
+    constructor(timescale, duration) {
         super();
         this.readyToDecode = false;
         this.nextDts = 0;
@@ -16,7 +16,7 @@ export class AACRemuxer extends BaseRemuxer {
             len: 0,
             fragmented: true,
             timescale: timescale,
-            duration: timescale,
+            duration: duration,
             samples: [],
             config: '',
             codec: '',

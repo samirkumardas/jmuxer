@@ -7,7 +7,7 @@ import Event from '../util/event';
 
 export default class RemuxController extends Event {
 
-    constructor(env) {
+    constructor(env, live) {
         super('remuxer');
         this.initialized = false;
         this.trackTypes = [];
@@ -15,17 +15,17 @@ export default class RemuxController extends Event {
         this.seq = 1;
         this.env = env;
         this.timescale = 1000;
-        this.mediaDuration = 0;
+        this.mediaDuration = live ? 0xffffffff : 0;
         this.aacParser = null;
     }
 
     addTrack(type) {
         if (type === 'video' || type === 'both') {
-            this.tracks.video = new H264Remuxer(this.timescale);
+            this.tracks.video = new H264Remuxer(this.timescale, this.mediaDuration);
             this.trackTypes.push('video');
         }
         if (type === 'audio' || type === 'both') {
-            const aacRemuxer = new AACRemuxer(this.timescale);
+            const aacRemuxer = new AACRemuxer(this.timescale, this.mediaDuration);
             this.aacParser = aacRemuxer.getAacParser();
             this.tracks.audio = aacRemuxer;
             this.trackTypes.push('audio');

@@ -4,7 +4,7 @@ import { BaseRemuxer } from './base.js';
 
 export class H264Remuxer extends BaseRemuxer {
 
-    constructor(timescale) {
+    constructor(timescale, duration) {
         super();
         this.readyToDecode = false;
         this.nextDts = 0;
@@ -20,7 +20,7 @@ export class H264Remuxer extends BaseRemuxer {
             width: 0,
             height: 0,
             timescale: timescale,
-            duration: timescale,
+            duration: duration,
             samples: [],
         };
         this.samples = [];
