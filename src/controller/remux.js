@@ -10,7 +10,6 @@ export default class RemuxController extends Event {
     constructor(env, live) {
         super('remuxer');
         this.initialized = false;
-        this.trackTypes = [];
         this.tracks = {};
         this.seq = 1;
         this.env = env;
@@ -22,18 +21,16 @@ export default class RemuxController extends Event {
     addTrack(type) {
         if (type === 'video' || type === 'both') {
             this.tracks.video = new H264Remuxer(this.timescale, this.mediaDuration);
-            this.trackTypes.push('video');
         }
         if (type === 'audio' || type === 'both') {
             const aacRemuxer = new AACRemuxer(this.timescale, this.mediaDuration);
             this.aacParser = aacRemuxer.getAacParser();
             this.tracks.audio = aacRemuxer;
-            this.trackTypes.push('audio');
         }
     }
 
     reset() {
-        for (let type of this.trackTypes) {
+        for (const type in this.tracks) {
             this.tracks[type].resetTrack();
         }
         this.initialized = false;
@@ -53,7 +50,7 @@ export default class RemuxController extends Event {
                 this.flush();
             }
         } else {
-            for (let type of this.trackTypes) {
+            for (const type in this.tracks) {
                 let track = this.tracks[type];
                 let pay = track.getPayload();
                 if (pay && pay.byteLength) {
@@ -80,7 +77,7 @@ export default class RemuxController extends Event {
 
     initSegment() {
         let tracks = [];
-        for (let type of this.trackTypes) {
+        for (const type in this.tracks) {
             let track = this.tracks[type];
             if (this.env == 'browser') {
                 let data = {
@@ -103,14 +100,14 @@ export default class RemuxController extends Event {
     }
 
     isReady() {
-        for (let type of this.trackTypes) {
+        for (const type in this.tracks) {
             if (!this.tracks[type].readyToDecode || !this.tracks[type].samples.length) return false;
         }
         return true;
     }
 
     remux(data) {
-        for (let type of this.trackTypes) {
+        for (const type in this.tracks) {
             let frames = data[type];
             if (type === 'audio' && this.tracks.video && !this.tracks.video.readyToDecode) continue; /* if video is present, don't add audio until video get ready */
             if (frames.length > 0) {
