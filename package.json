@@ -5,7 +5,9 @@
   "main": "dist/jmuxer.min.js",
   "scripts": {
     "build": "rollup -c",
-    "dev": "rollup -c -w",
+    "watch": "rollup -c -w",
+    "server": "cd example && nodemon server.mjs",
+    "dev": "concurrently --names \"BUILD,SERVER\" -c \"bgBlue.bold,bgMagenta.bold\" \"npm run watch\" \"npm run server\"",
     "pro": "NODE_ENV=production rollup -c",
     "lint": "eslint  -c .eslintrc.json ./src/",
     "test": "karma start karma.conf.js"
@@ -42,17 +44,19 @@
     "@rollup/pluginutils": "^4.0.0",
     "caniuse-lite": "^1.0.30001223",
     "chai": "^4.2.0",
+    "concurrently": "^9.2.1",
     "eslint": "^8.2.0",
     "karma": "^6.3.2",
     "karma-chai": "^0.1.0",
     "karma-chrome-launcher": "^3.1.0",
     "karma-mocha": "^2.0.1",
     "karma-rollup-preprocessor": "^7.0.5",
-    "mocha": "^9.1.3",
-    "patch-package": "^6.4.7",
+    "mocha": "^11.7.2",
+    "nodemon": "^3.1.10",
     "path": "^0.12.7",
     "rollup": "^2.59.0",
     "rollup-plugin-terser": "^7.0.2",
-    "ws": "^8.2.3"
+    "express": "^5.1.0",
+    "express-ws": "^5.0.2"
   }
 }

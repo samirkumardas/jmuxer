@@ -7,9 +7,17 @@
     <title>JMuxer stream demo</title>
 </head>
 <body>
-<p><b>Prerequisite command:</b> `node stream.js`</p>
 <div id="container" style="margin: 0 auto; text-align: center;">
-    <video style="border: 1px solid #333; max-width: 500px;" controls autoplay poster="images/loader-thumb.jpg" id="player"></video>
+    <div>
+        <h3>Demos:</h3>
+        <ul>
+            <li><a href="/">Raw chunks sent from server, and muxed by client</a></li>
+            <li><b>Muxed by server, fMP4 streamed from server</b></li>
+        </ul>
+    </div>
+    <div>
+        <video style="border: 1px solid #333; max-width: 500px;" controls autoplay muted poster="images/loader-thumb.jpg" id="player"></video>
+    </div>
 </div>
 <script>
 var chunks = [];
@@ -32,7 +40,7 @@ function addMoreBuffer() {
 }
 
 window.onload = function() {
-    var socketURL = 'ws://localhost:8080';
+    var socketURL = '/stream';
 
      var ws = new WebSocket(socketURL);
      ws.binaryType = 'arraybuffer';

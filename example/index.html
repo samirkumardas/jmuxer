@@ -8,51 +8,40 @@
 </head>
 <body>
 <div id="container" style="margin: 0 auto; text-align: center;">
-    <video style="border: 1px solid #333; max-width: 500px;" controls autoplay poster="images/loader-thumb.jpg" id="player"></video>
+    <div>
+        <h3>Demos:</h3>
+        <ul>
+            <li><b>Raw chunks sent from server, and muxed by client</b></li>
+            <li><a href="/">Muxed by server, fMP4 streamed from server</a></li>
+        </ul>
+    </div>
+    <div>
+        <video style="border: 1px solid #333; max-width: 500px;" controls autoplay poster="images/loader-thumb.jpg" id="player"></video>
+    </div>
 </div>
 <script>
-  function parse(data) {
-      var input = new Uint8Array(data),
-          dv = new DataView(input.buffer),
-          duration,
-          audioLength,
-          audio,
-          video;
-
-      duration = dv.getUint16(0, true);
-      audioLength = dv.getUint16(2, true);
-      audio = input.subarray(4, (audioLength + 4));
-      video = input.subarray(audioLength + 4);
-
-      return {
-        audio: audio,
-        video: video,
-        duration: duration
-      };
- }
-
- window.onload = function() {
-    var socketURL = 'ws://localhost:8080';
-    var jmuxer = new JMuxer({
+var jmuxer;
+window.onload = function() {
+    var socketURL = '/';
+    jmuxer = new JMuxer({
         node: 'player',
+        mode: 'video',
+        flushingTime: 1000,
+        fps: 30,
         debug: true,
-        flushingTime: 1000, // we need 1000 for the demo as server provides a chunk data of 1000ms at a time
         onError: function(data) {
-            console.log('Buffer error encountered', data);
-        },
-        onMissingVideoFrames: function (data) {
-            console.log('Video frames missing', data);
-        },
-        onMissingAudioFrames: function (data) {
-            console.log('Audio frames missing', data);
+            if (/Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor)) {
+                jmuxer.reset();
+            }
         }
      });
 
      var ws = new WebSocket(socketURL);
      ws.binaryType = 'arraybuffer';
      ws.addEventListener('message',function(event) {
-          var data = parse(event.data);
-          jmuxer.feed(data);
+          jmuxer.feed({
+            video: new Uint8Array(event.data)
+          });
      });
 
      ws.addEventListener('error', function(e) {
