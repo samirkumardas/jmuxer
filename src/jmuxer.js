@@ -34,7 +34,7 @@ export default class JMuxer extends Event {
         this.options = Object.assign({}, defaults, options);
         this.env = typeof process === 'object' && typeof window === 'undefined' ? 'node' : 'browser';
         if (this.options.debug) {
-            debug.setLogger(onLoggerLog, onLoggerErr);
+            debug.setLogger(this.options.onLoggerLog, this.options.onLoggerErr);
         }
 
         if (!this.options.fps) {
