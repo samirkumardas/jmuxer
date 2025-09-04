@@ -2,13 +2,15 @@ import * as debug from '../util/debug';
 import { MP4 } from '../util/mp4-generator.js';
 import { AACRemuxer } from '../remuxer/aac.js';
 import { H264Remuxer } from '../remuxer/h264.js';
+import { H265Remuxer } from '../remuxer/h265.js';
 import { appendByteArray, secToTime } from '../util/utils.js';
 import Event from '../util/event';
 
 export default class RemuxController extends Event {
 
-    constructor(env, live, frameDuration) {
+    constructor(env, live, videoCodec, frameDuration) {
         super('remuxer');
+        this.videoCodec = videoCodec;
         this.frameDuration = frameDuration;
         this.initialized = false;
         this.tracks = {};
@@ -20,7 +22,11 @@ export default class RemuxController extends Event {
 
     addTrack(type) {
         if (type === 'video' || type === 'both') {
-            this.tracks.video = new H264Remuxer(this.timescale, this.mediaDuration, this.frameDuration);
+            if (this.videoCodec == 'H265') {
+                this.tracks.video = new H265Remuxer(this.timescale, this.mediaDuration, this.frameDuration);
+            } else {
+                this.tracks.video = new H264Remuxer(this.timescale, this.mediaDuration, this.frameDuration);
+            }
             this.tracks.video.on('outOfData', () => {
                 this.dispatch('missingVideoFrames');
             });

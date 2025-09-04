@@ -375,6 +375,141 @@ export class MP4 {
             0x00, 0x2d, 0xc6, 0xc0])) // avgBitrate
         );
     }
+    
+    static hev1(track) {
+        var vps = [],
+            sps = [],
+            pps = [],
+            i,
+            data,
+            len;
+
+        // assemble the VPSs
+        for (i = 0; i < track.vps.length; i++) {
+            data = track.vps[i];
+            len = data.byteLength;
+            vps.push((len >>> 8) & 0xFF);
+            vps.push(len & 0xFF);
+            vps = vps.concat(Array.prototype.slice.call(data));
+        }
+
+        // assemble the SPSs
+        for (i = 0; i < track.sps.length; i++) {
+            data = track.sps[i];
+            len = data.byteLength;
+            sps.push((len >>> 8) & 0xFF);
+            sps.push(len & 0xFF);
+            sps = sps.concat(Array.prototype.slice.call(data));
+        }
+
+        // assemble the PPSs
+        for (i = 0; i < track.pps.length; i++) {
+            data = track.pps[i];
+            len = data.byteLength;
+            pps.push((len >>> 8) & 0xFF);
+            pps.push(len & 0xFF);
+            pps = pps.concat(Array.prototype.slice.call(data));
+        }
+
+        // auto-parse profile/tier/level from SPS
+        var spsData = track.sps[0];
+        var general_profile_space = (spsData[1] >> 6) & 0x03;
+        var general_tier_flag = (spsData[1] >> 5) & 0x01;
+        var general_profile_idc = spsData[1] & 0x1F;
+        var general_level_idc = spsData[12]; // level_idc is at byte 12 of SPS
+
+        // compatibility flags (bytes 2-5)
+        var general_profile_compatibility_flags =
+            (spsData[2] << 24) |
+            (spsData[3] << 16) |
+            (spsData[4] << 8) |
+            (spsData[5]);
+
+        // constraint indicator flags (bytes 6-11)
+        var general_constraint_indicator_flags =
+            (spsData[6] << 40) |
+            (spsData[7] << 32) |
+            (spsData[8] << 24) |
+            (spsData[9] << 16) |
+            (spsData[10] << 8) |
+            (spsData[11]);
+
+        // build the hvcC box
+        var hvcc = MP4.box(MP4.types.hvcC, new Uint8Array([
+            0x01, // configurationVersion
+            (general_profile_space << 6) | (general_tier_flag << 5) | general_profile_idc,
+            (general_profile_compatibility_flags >> 24) & 0xFF,
+            (general_profile_compatibility_flags >> 16) & 0xFF,
+            (general_profile_compatibility_flags >> 8) & 0xFF,
+            general_profile_compatibility_flags & 0xFF,
+            (general_constraint_indicator_flags >> 40) & 0xFF,
+            (general_constraint_indicator_flags >> 32) & 0xFF,
+            (general_constraint_indicator_flags >> 24) & 0xFF,
+            (general_constraint_indicator_flags >> 16) & 0xFF,
+            (general_constraint_indicator_flags >> 8) & 0xFF,
+            general_constraint_indicator_flags & 0xFF,
+            general_level_idc,
+            0xF0, 0x00, // min_spatial_segmentation_idc = 0
+            0xFC | 0,   // parallelismType = 0
+            0xFC | 1,   // chromaFormat = 1 (4:2:0)
+            0xF8 | 0,   // bitDepthLumaMinus8 = 0 (8-bit)
+            0xF8 | 0,   // bitDepthChromaMinus8 = 0
+            0x00, 0x00, // avgFrameRate = 0
+            0x00,       // constantFrameRate, numTemporalLayers, etc.
+            0x03,       // numOfArrays
+
+            0x20,       // array_completeness + NAL_unit_type (32 = VPS)
+            0x00, 0x01, // numNalus
+            ...vps,
+
+            0x21,       // NAL_unit_type (33 = SPS)
+            0x00, 0x01,
+            ...sps,
+
+            0x22,       // NAL_unit_type (34 = PPS)
+            0x00, 0x01,
+            ...pps
+        ]));
+
+        var width = track.width,
+            height = track.height;
+
+        return MP4.box(MP4.types.hev1, new Uint8Array([
+            0x00, 0x00, 0x00, // reserved
+            0x00, 0x00, 0x00, // reserved
+            0x00, 0x01,       // data_reference_index
+            0x00, 0x00,       // pre_defined
+            0x00, 0x00,       // reserved
+            0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, // pre_defined
+            (width >> 8) & 0xFF,
+            width & 0xff, // width
+            (height >> 8) & 0xFF,
+            height & 0xff, // height
+            0x00, 0x48, 0x00, 0x00, // horizresolution
+            0x00, 0x48, 0x00, 0x00, // vertresolution
+            0x00, 0x00, 0x00, 0x00, // reserved
+            0x00, 0x01,             // frame_count
+            0x12,
+            0x62, 0x69, 0x6E, 0x65, // 'binelpro.ru'
+            0x6C, 0x70, 0x72, 0x6F,
+            0x2E, 0x72, 0x75, 0x00,
+            0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00,       // compressorname padding
+            0x00, 0x18,             // depth = 24
+            0x11, 0x11              // pre_defined = -1
+        ]),
+        hvcc,
+        MP4.box(MP4.types.btrt, new Uint8Array([
+            0x00, 0x1c, 0x9c, 0x80, // bufferSizeDB
+            0x00, 0x2d, 0xc6, 0xc0, // maxBitrate
+            0x00, 0x2d, 0xc6, 0xc0  // avgBitrate
+        ])));
+    }
 
     static esds(track) {
         var configlen = track.config.byteLength;

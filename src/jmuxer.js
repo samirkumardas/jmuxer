@@ -15,6 +15,7 @@ export default class JMuxer extends Event {
         let defaults = {
             node: '',
             mode: 'both', // both, audio, video
+            videoCodec: 'H264', // H264, H265
             flushingTime: 500,
             maxDelay: 500,
             clearBuffer: true,
@@ -41,7 +42,7 @@ export default class JMuxer extends Event {
             this.options.fps = 30;
         }
         this.frameDuration = (1000 / this.options.fps) | 0;
-        this.remuxController = new RemuxController(this.env, options.live, this.frameDuration);
+        this.remuxController = new RemuxController(this.env, options.live, this.videoCodec, this.frameDuration);
         this.remuxController.addTrack(this.options.mode);
 
         this.initData();

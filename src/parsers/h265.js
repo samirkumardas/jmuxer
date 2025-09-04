@@ -1,9 +1,9 @@
 import { ExpGolomb } from '../util/exp-golomb.js';
 import * as debug from '../util/debug';
 
-// spec https://www.itu.int/rec/T-REC-H.264/
+// spec https://www.itu.int/rec/T-REC-H.265/
 
-export class H264Parser {
+export class H265Parser {
 
     static extractNALu(buffer) {
         let i = 0,
@@ -247,7 +247,6 @@ export class H264Parser {
             height: ((2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16) - ((frameMbsOnlyFlag ? 2 : 4) * (frameCropTopOffset + frameCropBottomOffset)),
         };
     }
-    
     static parseHeader(unit) {
         let decoder = new ExpGolomb(unit.getPayload());
         // skip NALu type
@@ -258,28 +257,34 @@ export class H264Parser {
     
 }
 
-export class NALU264 {
-    static get NDR() { return 1; }
-    static get IDR() { return 5; }
-    static get SEI() { return 6; }
-    static get SPS() { return 7; }
-    static get PPS() { return 8; }
-    static get AUD() { return 9; }
+export class NALU265 {
+    static get IDR_W_RADL()  { return 19; }
+    static get IDR_N_LP()    { return 20; }
+    static get CRA()         { return 21; }
+    static get VPS()         { return 32; }
+    static get SPS()         { return 33; }
+    static get PPS()         { return 34; }
+    static get AUD()         { return 35; }
+    static get SEI()         { return 39; }
+    static get SEI2()        { return 40; }
 
     static get TYPES() {
         return {
-            [NALU264.IDR]: 'IDR',
-            [NALU264.SEI]: 'SEI',
-            [NALU264.SPS]: 'SPS',
-            [NALU264.PPS]: 'PPS',
-            [NALU264.NDR]: 'NDR',
-            [NALU264.AUD]: 'AUD',
+            [NALU265.IDR_W_RADL]:  'IDR',
+            [NALU265.IDR_N_LP]:    'IDR2',
+            [NALU265.CRA]:         'CRA',
+            [NALU265.VPS]:         'VPS',
+            [NALU265.SPS]:         'SPS',
+            [NALU265.PPS]:         'PPS',
+            [NALU265.AUD]:         'AUD',
+            [NALU265.SEI]:         'SEI',
+            [NALU265.SEI2]:        'SEI2',
         };
     }
 
     static type(nalu) {
-        if (nalu.ntype in NALU264.TYPES) {
-            return NALU264.TYPES[nalu.ntype];
+        if (nalu.ntype in NALU265.TYPES) {
+            return NALU265.TYPES[nalu.ntype];
         } else {
             return 'UNKNOWN';
         }
@@ -287,27 +292,21 @@ export class NALU264 {
 
     constructor(data) {
         this.payload = data;
-        this.nri = (this.payload[0] & 0x60) >> 5; // nal_ref_idc
-        this.ntype = this.payload[0] & 0x1f;
-        this.isvcl = this.ntype == 1 || this.ntype == 5;
-        this.stype = ''; // slice_type
-        this.isfmb = false; // first_mb_in_slice
+        this.nalUnitType = (data[0] & 0b01111110) >> 1;
+        this.nuhLayerId = ((data[0] & 0b00000001) << 5) | ((data[1] & 0b11111000) >> 3);
+        this.nuhTemporalIdPlus1 = data[1] & 0b00000111;
     }
 
     toString() {
-        return `${NALU264.type(this)}: NRI: ${this.getNri()}`;
-    }
-
-    getNri() {
-        return this.nri;
+        return `${NALU265.type(this)}: Layer: ${this.nuhLayerId}, Temporal Id: ${this.nuhLayerId}`;
     }
 
     type() {
-        return this.ntype;
+        return this.nalUnitType;
     }
 
     isKeyframe() {
-        return this.ntype === NALU264.IDR;
+        return this.nalUnitType === NALU265.IDR_W_RADL || this.nalUnitType === NALU265.IDR_N_LP;
     }
     
     getPayload() {

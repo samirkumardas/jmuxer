@@ -28,6 +28,8 @@ Available options are:
 
 *mode* - Available values are: both, video and audio. Default is both
 
+*videoCodec* - Either H264 or H265 (browser must support H265 to work). Default is H264
+
 *flushingTime* - Buffer flushing time in milliseconds. Default value is 500 milliseconds. Set `flushingTime` to 0 if you want to flash buffer immediately or find any lag.
 
 *maxDelay* - Maximum delay time in milliseconds. Default value is 500 milliseconds.
@@ -86,7 +88,7 @@ Available options are:
 
 Media dataObject may have following properties:
 
-*video* - h264 buffer
+*video* - h264/h265 buffer
 
 *audio* - AAC buffer
 
