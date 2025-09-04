@@ -1,8 +1,4 @@
 import * as debug from './util/debug';
-import { NALU } from './util/nalu.js';
-import { appendByteArray } from './util/utils.js';
-import { H264Parser } from './parsers/h264.js';
-import { AACParser } from './parsers/aac.js';
 import Event from './util/event';
 import RemuxController from './controller/remux.js';
 import BufferController from './controller/buffer.js';
@@ -30,6 +26,7 @@ export default class JMuxer extends Event {
             onError: function() {}, // function called when jmuxer encounters any buffer related errors
             onMissingVideoFrames: function () {}, // function called when jmuxer encounters any missing video frames
             onMissingAudioFrames: function () {}, // function called when jmuxer encounters any missing audio frames
+            onKeyframePosition: function () {}, // function called when a keyframe is detected thus the provided time is seekable
         };
         this.options = Object.assign({}, defaults, options);
         this.env = typeof process === 'object' && typeof window === 'undefined' ? 'node' : 'browser';
@@ -41,7 +38,7 @@ export default class JMuxer extends Event {
             this.options.fps = 30;
         }
         this.frameDuration = (1000 / this.options.fps) | 0;
-        this.remuxController = new RemuxController(this.env, options.live);
+        this.remuxController = new RemuxController(this.env, options.live, this.frameDuration);
         this.remuxController.addTrack(this.options.mode);
 
         this.initData();
@@ -52,12 +49,34 @@ export default class JMuxer extends Event {
             this.remuxController.on('ready', this.createBuffer.bind(this));
             this.initBrowser();
         }
+
+        this.remuxController.on('missingVideoFrames', () => {
+            if (typeof this.options.onMissingVideoFrames === 'function') {
+                this.options.onMissingVideoFrames.call(null);
+            }
+        });
+        this.remuxController.on('missingAudioFrames', () => {
+            if (typeof this.options.onMissingAudioFrames === 'function') {
+                this.options.onMissingAudioFrames.call(null);
+            }
+        });
+        if (this.clearBuffer) {
+            // this is used to know when keyframes are,
+            // to essentially know which specific times are seekable
+            this.remuxController.on('keyframePosition', time => {
+                this.kfPosition.push(time);
+            });
+        }
+        if (typeof this.options.onKeyframePosition === 'function') {
+            this.remuxController.on('keyframePosition', time => {
+                this.dispatch('keyframePosition', time);
+            });
+        }
     }
 
     initData() {
         this.lastCleaningTime = Date.now();
         this.kfPosition = [];
-        this.kfCounter = 0;
         this.pendingUnits = {};
         this.remainingData = new Uint8Array();
         this.startInterval();
@@ -134,143 +153,11 @@ export default class JMuxer extends Event {
     }
 
     feed(data) {
-        let remux = false,
-            slices,
-            left,
-            duration,
-            chunks = {
-                video: [],
-                audio: []
-            };
-
         if (!data || !this.remuxController) return;
-        duration = data.duration ? parseInt(data.duration) : 0;
+        
+        data.duration = data.duration ? parseInt(data.duration) : 0;
 
-        if (data.video) {
-            data.video = appendByteArray(this.remainingData, data.video);
-            [slices, left] = H264Parser.extractNALu(data.video);
-            this.remainingData = left || new Uint8Array();
-
-            if (slices.length > 0) {
-                chunks.video = this.getVideoFrames(slices, duration, data.compositionTimeOffset);
-                remux = true;
-            } else {
-                debug.error('Failed to extract any NAL units from video data:', left);
-                if (typeof this.options.onMissingVideoFrames === 'function') {
-                    this.options.onMissingVideoFrames.call(null, data);
-                }
-                return;
-            }
-        }
-        if (data.audio) {
-            slices = AACParser.extractAAC(data.audio);
-            if (slices.length > 0) {
-                chunks.audio = this.getAudioFrames(slices, duration);
-                remux = true;
-            } else {
-                debug.error('Failed to extract audio data from:', data.audio);
-                if (typeof this.options.onMissingAudioFrames === 'function') {
-                    this.options.onMissingAudioFrames.call(null, data);
-                }
-                return;
-            }
-        }
-        if (!remux) {
-            debug.error('Input object must have video and/or audio property. Make sure it is a valid typed array');
-            return;
-        }
-        this.remuxController.remux(chunks);
-    }
-
-    getVideoFrames(nalus, duration, compositionTimeOffset) {
-        let units = [],
-            frames = [],
-            fd = 0,
-            tt = 0,
-            keyFrame = false,
-            vcl = false;
-        if (this.pendingUnits.units) {
-            units = this.pendingUnits.units;
-            vcl = this.pendingUnits.vcl;
-            keyFrame = this.pendingUnits.keyFrame;
-            this.pendingUnits = {};
-        }
-        for (let nalu of nalus) {
-            let unit = new NALU(nalu);
-            if (unit.type() === NALU.IDR || unit.type() === NALU.NDR) {
-                H264Parser.parseHeader(unit);
-            }
-            if (units.length && vcl && (unit.isfmb || !unit.isvcl)) {
-                frames.push({
-                    units,
-                    keyFrame
-                });
-                units = [];
-                keyFrame = false;
-                vcl = false;
-            }
-            units.push(unit);
-            keyFrame = keyFrame || unit.isKeyframe();
-            vcl = vcl || unit.isvcl;
-        }
-        if (units.length) {
-            // lets keep indecisive nalus as pending in case of fixed fps
-            if (!duration) {
-                this.pendingUnits = {
-                    units,
-                    keyFrame,
-                    vcl
-                };
-            }
-            else if (vcl) {
-                frames.push({
-                    units,
-                    keyFrame
-                });
-            } else {
-                let last = frames.length - 1;
-                if (last >= 0) {
-                    frames[last].units = frames[last].units.concat(units);
-                }
-            }
-        }
-        fd = duration ? duration / frames.length | 0 : this.frameDuration;
-        tt = duration ? (duration - (fd * frames.length)) : 0;
-
-        frames.map((frame) => {
-            frame.duration = fd;
-            frame.compositionTimeOffset = compositionTimeOffset;
-            if (tt > 0) {
-                frame.duration++;
-                tt--;
-            }
-            this.kfCounter++;
-            if (frame.keyFrame && this.options.clearBuffer) {
-                this.kfPosition.push((this.kfCounter * fd) / 1000);
-            }
-        });
-        debug.log(`jmuxer: No. of frames of the last chunk: ${frames.length}`);
-        return frames;
-    }
-
-    getAudioFrames(aacFrames, duration) {
-        let frames = [],
-            fd = 0,
-            tt = 0;
-
-        for (let units of aacFrames) {
-            frames.push({ units });
-        }
-        fd = duration ? duration / frames.length | 0 : this.frameDuration;
-        tt = duration ? (duration - (fd * frames.length)) : 0;
-        frames.map((frame) => {
-            frame.duration = fd;
-            if (tt > 0) {
-                frame.duration++;
-                tt--;
-            }
-        });
-        return frames;
+        this.remuxController.feed(data);
     }
 
     destroy() {

@@ -27,10 +27,10 @@ export default class Event {
         this.listener = {};
     }
 
-    dispatch(event, data) {
+    dispatch(event, ...data) {
         if (this.listener[event]) {
             this.listener[event].map((each) => {
-                each.apply(null, [data]);
+                each.apply(null, data);
             });
             return true;
         }

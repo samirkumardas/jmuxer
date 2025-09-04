@@ -1,7 +1,6 @@
 import * as debug from '../util/debug';
 
 export class AACParser {
-    static aacHeader;
 
     static get samplingRateMap() {
         return [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
@@ -22,56 +21,30 @@ export class AACParser {
     static extractAAC(buffer) {
         let i = 0,
             length = buffer.byteLength,
-            result = [],
+            slices = [],
             headerLength,
             frameLength;
 
         if (!AACParser.isAACPattern(buffer)) {
             debug.error('Invalid ADTS audio format');
-            return result;
+            return {
+                valid: false,
+            };
         }
         headerLength = AACParser.getHeaderLength(buffer);
-        if (!AACParser.aacHeader) {
-            AACParser.aacHeader = buffer.subarray(0, headerLength);
-        }
+        const header = buffer.subarray(0, headerLength);
 
         while (i < length) {
             frameLength = AACParser.getFrameLength(buffer);
-            result.push(buffer.subarray(headerLength, frameLength));
+            slices.push(buffer.subarray(headerLength, frameLength));
             buffer = buffer.slice(frameLength);
             i += frameLength;
         }
-        return result;
+        return {
+            valid: true,
+            header,
+            slices,
+        };
     }
 
-    constructor(remuxer) {
-        this.remuxer = remuxer;
-        this.track = remuxer.mp4track;
-    }
-
-    setAACConfig() {
-        let objectType,
-            sampleIndex,
-            channelCount,
-            config = new Uint8Array(2),
-            headerData = AACParser.aacHeader;
-
-        if (!headerData) return;
-            
-        objectType = ((headerData[2] & 0xC0) >>> 6) + 1;
-        sampleIndex = ((headerData[2] & 0x3C) >>> 2);
-        channelCount = ((headerData[2] & 0x01) << 2);
-        channelCount |= ((headerData[3] & 0xC0) >>> 6);
-
-        /* refer to http://wiki.multimedia.cx/index.php?title=MPEG-4_Audio#Audio_Specific_Config */
-        config[0] = objectType << 3;
-        config[0] |= (sampleIndex & 0x0E) >> 1;
-        config[1] |= (sampleIndex & 0x01) << 7;
-        config[1] |= channelCount << 3;
-
-        this.track.codec = 'mp4a.40.' + objectType;
-        this.track.channelCount = channelCount;
-        this.track.config = config;
-        this.remuxer.readyToDecode = true;
-    }
 }

@@ -7,25 +7,33 @@ import Event from '../util/event';
 
 export default class RemuxController extends Event {
 
-    constructor(env, live) {
+    constructor(env, live, frameDuration) {
         super('remuxer');
+        this.frameDuration = frameDuration;
         this.initialized = false;
         this.tracks = {};
         this.seq = 1;
         this.env = env;
         this.timescale = 1000;
         this.mediaDuration = live ? 0xffffffff : 0;
-        this.aacParser = null;
     }
 
     addTrack(type) {
         if (type === 'video' || type === 'both') {
-            this.tracks.video = new H264Remuxer(this.timescale, this.mediaDuration);
+            this.tracks.video = new H264Remuxer(this.timescale, this.mediaDuration, this.frameDuration);
+            this.tracks.video.on('outOfData', () => {
+                this.dispatch('missingVideoFrames');
+            });
+            this.tracks.video.on('keyframePosition', (time) => {
+                this.dispatch('keyframePosition', time);
+            });
         }
         if (type === 'audio' || type === 'both') {
-            const aacRemuxer = new AACRemuxer(this.timescale, this.mediaDuration);
-            this.aacParser = aacRemuxer.getAacParser();
+            const aacRemuxer = new AACRemuxer(this.timescale, this.mediaDuration, this.frameDuration);
             this.tracks.audio = aacRemuxer;
+            this.tracks.video.on('outOfData', () => {
+                this.dispatch('missingAudioFrames');
+            });
         }
     }
 
@@ -43,34 +51,33 @@ export default class RemuxController extends Event {
 
     flush() {
         if (!this.initialized) {
-            if (this.isReady()) {
-                this.dispatch('ready');
-                this.initSegment();
-                this.initialized = true;
-                this.flush();
-            }
-        } else {
-            for (const type in this.tracks) {
-                let track = this.tracks[type];
-                let pay = track.getPayload();
-                if (pay && pay.byteLength) {
-                    const moof = MP4.moof(this.seq, track.dts, track.mp4track);
-                    const mdat = MP4.mdat(pay);
-                    let payload = appendByteArray(moof, mdat);
-                    let data = {
-                        type: type,
-                        payload: payload,
-                        dts: track.dts
-                    };
-                    if (type === 'video') {
-                        data.fps = track.mp4track.fps;
-                    }
-                    this.dispatch('buffer', data);
-                    let duration = secToTime(track.dts / this.timescale);
-                    debug.log(`put segment (${type}): dts: ${track.dts} frames: ${track.mp4track.samples.length} second: ${duration}`);
-                    track.flush();
-                    this.seq++;
+            if (!this.isReady()) return;
+
+            this.dispatch('ready');
+            this.initSegment();
+            this.initialized = true;
+        }
+
+        for (const type in this.tracks) {
+            let track = this.tracks[type];
+            let pay = track.getPayload();
+            if (pay && pay.byteLength) {
+                const moof = MP4.moof(this.seq, track.dts, track.mp4track);
+                const mdat = MP4.mdat(pay);
+                let payload = appendByteArray(moof, mdat);
+                let data = {
+                    type: type,
+                    payload: payload,
+                    dts: track.dts
+                };
+                if (type === 'video') {
+                    data.fps = track.mp4track.fps;
                 }
+                this.dispatch('buffer', data);
+                let duration = secToTime(track.dts / this.timescale);
+                debug.log(`put segment (${type}): dts: ${track.dts} frames: ${track.mp4track.samples.length} second: ${duration}`);
+                track.flush();
+                this.seq++;
             }
         }
     }
@@ -106,14 +113,21 @@ export default class RemuxController extends Event {
         return true;
     }
 
-    remux(data) {
-        for (const type in this.tracks) {
-            let frames = data[type];
-            if (type === 'audio' && this.tracks.video && !this.tracks.video.readyToDecode) continue; /* if video is present, don't add audio until video get ready */
-            if (frames.length > 0) {
-                this.tracks[type].remux(frames);
-            }
+    feed(data) {
+        let remux = false;
+        
+        if (data.video && this.tracks.video) {
+            remux |= this.tracks.video.feed(data.video, data.duration, data.compositionTimeOffset);
         }
+        if (data.audio && this.tracks.audio) {
+            remux |= this.tracks.audio.feed(data.audio, data.duration);
+        }
+
+        if (!remux) {
+            debug.error('Input object must have video and/or audio property. Make sure it is a valid typed array');
+            return;
+        }
+
         this.flush();
     }
 }

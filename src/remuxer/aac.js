@@ -4,9 +4,11 @@ import { BaseRemuxer } from './base.js';
 
 export class AACRemuxer extends BaseRemuxer {
 
-    constructor(timescale, duration) {
-        super();
+    constructor(timescale, duration, frameDuration) {
+        super('AACRemuxer');
+        this.frameDuration = frameDuration;
         this.readyToDecode = false;
+        this.header = null;
         this.nextDts = 0;
         this.dts = 0;
         this.mp4track = {
@@ -22,17 +24,50 @@ export class AACRemuxer extends BaseRemuxer {
             codec: '',
         };
         this.samples = [];
-        this.aac = new AACParser(this);
     }
 
     resetTrack() {
         this.readyToDecode = false;
+        this.header = null;
         this.mp4track.codec = '';
         this.mp4track.channelCount = '';
         this.mp4track.config = '';
         this.mp4track.timescale = this.timescale;
         this.nextDts = 0;
         this.dts = 0;
+    }
+
+    feed(data, duration) {
+        const { valid, header, slices } = AACParser.extractAAC(data);
+        if (!this.header) this.header = header;
+        if (valid && slices.length > 0) {
+            this.remux(this.getAudioFrames(slices, duration));
+            return true;
+        } else {
+            debug.error('Failed to extract audio data from:', data);
+            this.dispach('outOfData');
+            return false;
+        }
+    }
+
+    getAudioFrames(aacFrames, duration) {
+        let frames = [],
+            fd = 0,
+            tt = 0;
+
+        for (let units of aacFrames) {
+            frames.push({ units });
+        }
+        fd = duration ? duration / frames.length | 0 : this.frameDuration;
+        tt = duration ? (duration - (fd * frames.length)) : 0;
+        frames.map((frame) => {
+            frame.duration = fd;
+            if (tt > 0) {
+                frame.duration++;
+                tt--;
+            }
+        });
+        return frames;
     }
 
     remux(frames) {
@@ -48,7 +83,7 @@ export class AACRemuxer extends BaseRemuxer {
                 });
                 this.mp4track.len += size;
                 if (!this.readyToDecode) {
-                    this.aac.setAACConfig();
+                    this.setAACConfig();
                 }
             }
         }
@@ -103,7 +138,28 @@ export class AACRemuxer extends BaseRemuxer {
         return new Uint8Array(payload.buffer, 0, this.mp4track.len);
     }
 
-    getAacParser() {
-        return this.aac;
+    setAACConfig() {
+        let objectType,
+            sampleIndex,
+            channelCount,
+            config = new Uint8Array(2);
+
+        if (!this.header) return;
+            
+        objectType = ((this.header[2] & 0xC0) >>> 6) + 1;
+        sampleIndex = ((this.header[2] & 0x3C) >>> 2);
+        channelCount = ((this.header[2] & 0x01) << 2);
+        channelCount |= ((this.header[3] & 0xC0) >>> 6);
+
+        /* refer to http://wiki.multimedia.cx/index.php?title=MPEG-4_Audio#Audio_Specific_Config */
+        config[0] = objectType << 3;
+        config[0] |= (sampleIndex & 0x0E) >> 1;
+        config[1] |= (sampleIndex & 0x01) << 7;
+        config[1] |= channelCount << 3;
+
+        this.mp4track.codec = 'mp4a.40.' + objectType;
+        this.mp4track.channelCount = channelCount;
+        this.mp4track.config = config;
+        this.readyToDecode = true;
     }
 }
