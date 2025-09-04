@@ -44,11 +44,19 @@ Available options are:
 
 *onError* - function. Will be fired if jMuxer encounters any buffer related errors.
 
+*onUnsupportedCodec* - function. Will be fired when trying to play a codec that is not supported by the browser.
+
 *onMissingVideoFrames* - function. Will be fired if jMuxer encounters any missing video frames.
 
 *onMissingAudioFrames* - function. Will be fired if jMuxer encounters any missing audio frames.
 
+*onKeyframePosition* - function. Will be fired when a keyframe is detected thus the provided time is seekable.
+
 *debug* - true/false. Will print debug log in browser console. Default is false.
+
+*onLoggerLog* - function. When debug enabled, will be called to log basic information. Defaults to console.log
+
+*onLoggerErr* - function. When debug enabled, will be called to log errors information. Defaults to console.error
 
 **Complete example:**
 
