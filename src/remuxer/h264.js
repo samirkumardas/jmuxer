@@ -1,7 +1,6 @@
 import * as debug from '../util/debug';
-import { H264Parser } from '../parsers/h264.js';
+import { H264Parser, NALU264 } from '../parsers/h264.js';
 import { BaseRemuxer } from './base.js';
-import { NALU } from '../util/nalu.js';
 import { appendByteArray } from '../util/utils.js';
 
 export class H264Remuxer extends BaseRemuxer {
@@ -74,8 +73,8 @@ export class H264Remuxer extends BaseRemuxer {
             this.pendingUnits = {};
         }
         for (let nalu of nalus) {
-            let unit = new NALU(nalu);
-            if (unit.type() === NALU.IDR || unit.type() === NALU.NDR) {
+            let unit = new NALU264(nalu);
+            if (unit.type() === NALU264.IDR || unit.type() === NALU264.NDR) {
                 H264Parser.parseHeader(unit);
             }
             if (units.length && vcl && (unit.isfmb || !unit.isvcl)) {
@@ -229,11 +228,11 @@ export class H264Remuxer extends BaseRemuxer {
 
         let push = false;
         switch (unit.type()) {
-            case NALU.IDR:
-            case NALU.NDR:
+            case NALU264.IDR:
+            case NALU264.NDR:
                 push = true;
                 break;
-            case NALU.PPS:
+            case NALU264.PPS:
                 if (!this.mp4track.pps) {
                     this.parsePPS(unit.getPayload());
                     if (!this.readyToDecode && this.mp4track.pps && this.mp4track.sps) {
@@ -242,7 +241,7 @@ export class H264Remuxer extends BaseRemuxer {
                 }
                 push = true;
                 break;
-            case NALU.SPS:
+            case NALU264.SPS:
                 if (!this.mp4track.sps) {
                     this.parseSPS(unit.getPayload());
                     if (!this.readyToDecode && this.mp4track.pps && this.mp4track.sps) {
@@ -251,10 +250,10 @@ export class H264Remuxer extends BaseRemuxer {
                 }
                 push = true;
                 break;
-            case NALU.AUD:
+            case NALU264.AUD:
                 debug.log('AUD - ignoing');
                 break;
-            case NALU.SEI:
+            case NALU264.SEI:
                 debug.log('SEI - ignoing');
                 break;
             default:
