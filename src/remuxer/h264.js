@@ -72,12 +72,12 @@ export class H264Remuxer extends BaseRemuxer {
             keyFrame = this.pendingUnits.keyFrame;
             this.pendingUnits = {};
         }
+
         for (let nalu of nalus) {
             let unit = new NALU264(nalu);
-            if (unit.type() === NALU264.IDR || unit.type() === NALU264.NDR) {
-                H264Parser.parseHeader(unit);
-            }
-            if (units.length && vcl && (unit.isfmb || !unit.isvcl)) {
+
+            // frame boundary detection
+            if (units.length && vcl && (unit.isFirstSlice || !unit.isVCL)) {
                 frames.push({
                     units,
                     keyFrame
@@ -86,10 +86,12 @@ export class H264Remuxer extends BaseRemuxer {
                 keyFrame = false;
                 vcl = false;
             }
+
             units.push(unit);
-            keyFrame = keyFrame || unit.isKeyframe();
-            vcl = vcl || unit.isvcl;
+            keyFrame = keyFrame || unit.isKeyframe;
+            vcl = vcl || unit.isVCL;
         }
+
         if (units.length) {
             // lets keep indecisive nalus as pending in case of fixed fps
             if (!duration) {
@@ -98,8 +100,7 @@ export class H264Remuxer extends BaseRemuxer {
                     keyFrame,
                     vcl
                 };
-            }
-            else if (vcl) {
+            } else if (vcl) {
                 frames.push({
                     units,
                     keyFrame
@@ -111,6 +112,7 @@ export class H264Remuxer extends BaseRemuxer {
                 }
             }
         }
+
         fd = duration ? duration / frames.length | 0 : this.frameDuration;
         tt = duration ? (duration - (fd * frames.length)) : 0;
 
@@ -126,7 +128,7 @@ export class H264Remuxer extends BaseRemuxer {
                 this.dispatch('keyframePosition', (this.kfCounter * fd) / 1000);
             }
         });
-        debug.log(`jmuxer: No. of frames of the last chunk: ${frames.length}`);
+        debug.log(`jmuxer: No. of H264 frames of the last chunk: ${frames.length}`);
         return frames;
     }
 
@@ -226,27 +228,21 @@ export class H264Remuxer extends BaseRemuxer {
     parseNAL(unit) {
         if (!unit) return false;
 
+        if (unit.isVCL) {
+            return true;
+        }
+
         let push = false;
         switch (unit.type()) {
-            case NALU264.IDR:
-            case NALU264.NDR:
-                push = true;
-                break;
             case NALU264.PPS:
                 if (!this.mp4track.pps) {
                     this.parsePPS(unit.getPayload());
-                    if (!this.readyToDecode && this.mp4track.pps && this.mp4track.sps) {
-                        this.readyToDecode = true;
-                    }
                 }
                 push = true;
                 break;
             case NALU264.SPS:
                 if (!this.mp4track.sps) {
                     this.parseSPS(unit.getPayload());
-                    if (!this.readyToDecode && this.mp4track.pps && this.mp4track.sps) {
-                        this.readyToDecode = true;
-                    }
                 }
                 push = true;
                 break;
@@ -258,6 +254,11 @@ export class H264Remuxer extends BaseRemuxer {
                 break;
             default:
         }
+
+        if (!this.readyToDecode && this.mp4track.pps && this.mp4track.sps) {
+            this.readyToDecode = true;
+        }
+        
         return push;
     }
 }

@@ -248,14 +248,6 @@ export class H264Parser {
         };
     }
     
-    static parseHeader(unit) {
-        let decoder = new ExpGolomb(unit.getPayload());
-        // skip NALu type
-        decoder.readUByte();
-        unit.isfmb = decoder.readUEG() === 0;
-        unit.stype = decoder.readUEG();
-    }
-    
 }
 
 export class NALU264 {
@@ -277,25 +269,16 @@ export class NALU264 {
         };
     }
 
-    static type(nalu) {
-        if (nalu.ntype in NALU264.TYPES) {
-            return NALU264.TYPES[nalu.ntype];
-        } else {
-            return 'UNKNOWN';
-        }
-    }
-
     constructor(data) {
         this.payload = data;
         this.nri = (this.payload[0] & 0x60) >> 5; // nal_ref_idc
-        this.ntype = this.payload[0] & 0x1f;
-        this.isvcl = this.ntype == 1 || this.ntype == 5;
-        this.stype = ''; // slice_type
-        this.isfmb = false; // first_mb_in_slice
+        this.nalUnitType = this.payload[0] & 0x1f;
+        this._sliceType = null;
+        this._isFirstSlice = false;
     }
 
     toString() {
-        return `${NALU264.type(this)}: NRI: ${this.getNri()}`;
+        return `${NALU264.TYPES[this] || 'UNKNOWN'}: NRI: ${this.getNri()}`;
     }
 
     getNri() {
@@ -303,11 +286,37 @@ export class NALU264 {
     }
 
     type() {
-        return this.ntype;
+        return this.nalUnitType;
     }
 
-    isKeyframe() {
-        return this.ntype === NALU264.IDR;
+    get isKeyframe() {
+        return this.nalUnitType === NALU264.IDR;
+    }
+
+    get isVCL() {
+        return this.nalUnitType == NALU264.IDR || this.nalUnitType == NALU264.NDR;
+    }
+
+    parseHeader() {
+        let decoder = new ExpGolomb(this.getPayload());
+        // skip NALu type
+        decoder.readUByte();
+        this._isFirstSlice = decoder.readUEG() === 0;
+        this._sliceType = decoder.readUEG();
+    }
+
+    get isFirstSlice() {
+        if (!this._isFirstSlice) {
+            this.parseHeader();
+        }
+        return this._isFirstSlice;
+    }
+
+    get sliceType() {
+        if (!this._sliceType) {
+            this.parseHeader();
+        }
+        return this._sliceType;
     }
     
     getPayload() {

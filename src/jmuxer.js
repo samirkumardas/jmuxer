@@ -42,7 +42,7 @@ export default class JMuxer extends Event {
             this.options.fps = 30;
         }
         this.frameDuration = (1000 / this.options.fps) | 0;
-        this.remuxController = new RemuxController(this.env, options.live, this.videoCodec, this.frameDuration);
+        this.remuxController = new RemuxController(this.env, options.live, this.options.videoCodec, this.frameDuration);
         this.remuxController.addTrack(this.options.mode);
 
         this.initData();
@@ -215,7 +215,7 @@ export default class JMuxer extends Event {
         for (let type in this.remuxController.tracks) {
             let track = this.remuxController.tracks[type];
             if (!JMuxer.isSupported(`${type}/mp4; codecs="${track.mp4track.codec}"`)) {
-                debug.error('Browser does not support codec');
+                debug.error(`Browser does not support codec: ${type}/mp4; codecs="${track.mp4track.codec}"`);
                 if (typeof this.options.onUnsupportedCodec === 'function') {
                     this.options.onUnsupportedCodec.call(null, track.mp4track.codec);
                 }

@@ -16,8 +16,10 @@ export class H265Remuxer extends BaseRemuxer {
             type: 'video',
             len: 0,
             fragmented: true,
+            vps: '',
             sps: '',
             pps: '',
+            hvcC: {},
             fps: 30,
             width: 0,
             height: 0,
@@ -33,8 +35,10 @@ export class H265Remuxer extends BaseRemuxer {
 
     resetTrack() {
         this.readyToDecode = false;
+        this.mp4track.vps = '';
         this.mp4track.sps = '';
         this.mp4track.pps = '';
+        this.mp4track.hvcC = {};
         this.nextDts = 0;
         this.dts = 0;
         this.remainingData = new Uint8Array();
@@ -46,7 +50,7 @@ export class H265Remuxer extends BaseRemuxer {
         let slices = [];
         let left;
         data = appendByteArray(this.remainingData, data);
-        [slices, left] = H264Parser.extractNALu(data);
+        [slices, left] = H265Parser.extractNALu(data);
         this.remainingData = left || new Uint8Array();
     
         if (slices.length > 0) {
@@ -62,22 +66,23 @@ export class H265Remuxer extends BaseRemuxer {
     getVideoFrames(nalus, duration, compositionTimeOffset) {
         let units = [],
             frames = [],
-            fd = 0, // frame duration
-            tt = 0, // time ticks (remainder adjustment counter)
+            fd = 0,
+            tt = 0,
             keyFrame = false,
-            vcl = false; // Video Coding Layer data (i.e., a "real" frame)
+            vcl = false;
+
         if (this.pendingUnits.units) {
             units = this.pendingUnits.units;
             vcl = this.pendingUnits.vcl;
             keyFrame = this.pendingUnits.keyFrame;
             this.pendingUnits = {};
         }
+
         for (let nalu of nalus) {
-            let unit = new NALU264(nalu);
-            if (unit.type() === NALU264.IDR || unit.type() === NALU264.NDR) {
-                H264Parser.parseHeader(unit);
-            }
-            if (units.length && vcl && (unit.isfmb || !unit.isvcl)) {
+            let unit = new NALU265(nalu);
+
+            // frame boundary detection
+            if (units.length && vcl && (unit.isFirstSlice || !unit.isVCL)) {
                 frames.push({
                     units,
                     keyFrame
@@ -86,20 +91,20 @@ export class H265Remuxer extends BaseRemuxer {
                 keyFrame = false;
                 vcl = false;
             }
+
             units.push(unit);
-            keyFrame = keyFrame || unit.isKeyframe();
-            vcl = vcl || unit.isvcl;
+            keyFrame = keyFrame || unit.isKeyframe;
+            vcl = vcl || unit.isVCL;
         }
+
         if (units.length) {
-            // lets keep indecisive nalus as pending in case of fixed fps
             if (!duration) {
                 this.pendingUnits = {
                     units,
                     keyFrame,
                     vcl
                 };
-            }
-            else if (vcl) {
+            } else if (vcl) {
                 frames.push({
                     units,
                     keyFrame
@@ -111,8 +116,9 @@ export class H265Remuxer extends BaseRemuxer {
                 }
             }
         }
-        fd = duration ? duration / frames.length | 0 : this.frameDuration;
-        tt = duration ? (duration - (fd * frames.length)) : 0;
+
+        fd = duration ? (duration / frames.length) | 0 : this.frameDuration;
+        tt = duration ? duration - fd * frames.length : 0;
 
         frames.map((frame) => {
             frame.duration = fd;
@@ -126,9 +132,11 @@ export class H265Remuxer extends BaseRemuxer {
                 this.dispatch('keyframePosition', (this.kfCounter * fd) / 1000);
             }
         });
-        debug.log(`jmuxer: No. of frames of the last chunk: ${frames.length}`);
+
+        debug.log(`jmuxer: No. of H265 frames of the last chunk: ${frames.length}`);
         return frames;
     }
+
 
     remux(frames) {
         for (let frame of frames) {
@@ -201,63 +209,81 @@ export class H265Remuxer extends BaseRemuxer {
     }
 
     parseSPS(sps) {
-        var config = H264Parser.readSPS(new Uint8Array(sps));
+        const config = H265Parser.readSPS(new Uint8Array(sps));
 
         this.mp4track.fps = config.fps || this.mp4track.fps;
         this.mp4track.width = config.width;
         this.mp4track.height = config.height;
         this.mp4track.sps = [new Uint8Array(sps)];
-        this.mp4track.codec = 'avc1.';
 
-        let codecarray = new DataView(sps.buffer, sps.byteOffset + 1, 4);
-        for (let i = 0; i < 3; ++i) {
-            var h = codecarray.getUint8(i).toString(16);
-            if (h.length < 2) {
-                h = '0' + h;
-            }
-            this.mp4track.codec += h;
-        }
+        console.log(config);
+
+        this.mp4track.codec = `hvc1.${config.profile_idc}.${config.profile_compatibility_flags.toString(16)}`
+            + `.L${config.level_idc}${config.tier_flag ? 'H' : 'L'}`
+            + `.${config.constraint_indicator_flags.toString(16)}`;
+
+        this.mp4track.hvcC = {
+            profile_space: config.profile_space,
+            tier_flag: config.tier_flag,
+            profile_idc: config.profile_idc,
+            profile_compatibility_flags: config.profile_compatibility_flags,
+            constraint_indicator_flags: config.constraint_indicator_flags,
+            level_idc: config.level_idc,
+            chroma_format_idc: config.chroma_format_idc
+        };
     }
 
     parsePPS(pps) {
         this.mp4track.pps = [new Uint8Array(pps)];
     }
 
+    parseVPS(vps) {
+        this.mp4track.vps = [new Uint8Array(vps)];
+    }
+
     parseNAL(unit) {
         if (!unit) return false;
 
+        if (unit.isVCL) {
+            return true;
+        }
+
         let push = false;
         switch (unit.type()) {
-            case NALU264.IDR:
-            case NALU264.NDR:
-                push = true;
-                break;
-            case NALU264.PPS:
-                if (!this.mp4track.pps) {
-                    this.parsePPS(unit.getPayload());
-                    if (!this.readyToDecode && this.mp4track.pps && this.mp4track.sps) {
-                        this.readyToDecode = true;
-                    }
+            case NALU265.VPS:
+                if (!this.mp4track.vps) {
+                    this.parseVPS(unit.getPayload());
                 }
                 push = true;
                 break;
-            case NALU264.SPS:
+
+            case NALU265.SPS:
                 if (!this.mp4track.sps) {
                     this.parseSPS(unit.getPayload());
-                    if (!this.readyToDecode && this.mp4track.pps && this.mp4track.sps) {
-                        this.readyToDecode = true;
-                    }
                 }
                 push = true;
                 break;
-            case NALU264.AUD:
+
+            case NALU265.PPS:
+                if (!this.mp4track.pps) {
+                    this.parsePPS(unit.getPayload());
+                }
+                push = true;
+                break;
+            case NALU265.AUD:
                 debug.log('AUD - ignoing');
                 break;
-            case NALU264.SEI:
+            case NALU265.SEI:
+            case NALU265.SEI2:
                 debug.log('SEI - ignoing');
                 break;
             default:
         }
+
+        if (!this.readyToDecode && this.mp4track.vps && this.mp4track.sps && this.mp4track.pps) {
+            this.readyToDecode = true;
+        }
+
         return push;
     }
 }

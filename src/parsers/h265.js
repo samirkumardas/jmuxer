@@ -78,7 +78,7 @@ export class H265Parser {
 
     /**
      * Read a sequence parameter set and return some interesting video
-     * properties. A sequence parameter set is the H264 metadata that
+     * properties. A sequence parameter set is the H265 metadata that
      * describes the properties of upcoming video frames.
      * @param data {Uint8Array} the bytes of a sequence parameter set
      * @return {object} an object with configuration parsed from the
@@ -87,174 +87,115 @@ export class H265Parser {
      */
     static readSPS(data) {
         let decoder = new ExpGolomb(data);
-        let frameCropLeftOffset = 0,
-            frameCropRightOffset = 0,
-            frameCropTopOffset = 0,
-            frameCropBottomOffset = 0,
-            sarScale = 1,
-            profileIdc,
-            profileCompat,
-            levelIdc,
-            numRefFramesInPicOrderCntCycle,
-            picWidthInMbsMinus1,
-            picHeightInMapUnitsMinus1,
-            frameMbsOnlyFlag,
-            scalingListCount,
-            fps = 0;
-        decoder.readUByte(); // skip NAL header
 
-        // rewrite NAL
-        let rbsp = [],
-            hdr_bytes = 1,
-            nal_bytes = data.byteLength;
-        for (let i = hdr_bytes; i < nal_bytes; i ++) {
-            if ((i + 2) < nal_bytes && decoder.readBits(24, false) === 0x000003) {
-                rbsp.push(decoder.readBits(8));
-                rbsp.push(decoder.readBits(8));
-                i += 2;
+        // Skip NALU header (2 bytes for HEVC)
+        decoder.readUByte();
+        decoder.readUByte();
 
-                // emulation_prevention_three_byte
-                decoder.readBits(8);
-            }
-            else {
-                rbsp.push(decoder.readBits(8));
-            }
+        decoder.readBits(4); // sps_video_parameter_set_id
+        decoder.readBits(3); // sps_max_sub_layers_minus1
+        decoder.readBits(1); // sps_temporal_id_nesting_flag
+
+        // --- profile_tier_level() ---
+        let profile_space = decoder.readBits(2);
+        let tier_flag = decoder.readBits(1);
+        let profile_idc = decoder.readBits(5);
+
+        let profile_compatibility_flags = decoder.readUInt(); // 32 bits
+        let constraint_indicator_flags_high = decoder.readUInt(); // 32 bits
+        let constraint_indicator_flags_low = decoder.readUShort(); // 16 bits
+        let constraint_indicator_flags = 
+            (BigInt(constraint_indicator_flags_high) << 16n) | BigInt(constraint_indicator_flags_low);
+
+        let level_idc = decoder.readUByte();
+
+        decoder.readUEG(); // seq_parameter_set_id
+
+        let chroma_format_idc = decoder.readUEG();
+        if (chroma_format_idc === 3) {
+            decoder.readBits(1); // separate_colour_plane_flag
         }
-        decoder.setData(new Uint8Array(rbsp));
-        // end of rewrite data
 
-        profileIdc = decoder.readUByte(); // profile_idc
-        profileCompat = decoder.readBits(5); // constraint_set[0-4]_flag, u(5)
-        decoder.skipBits(3); // reserved_zero_3bits u(3),
-        levelIdc = decoder.readUByte(); // level_idc u(8)
-        decoder.skipUEG(); // seq_parameter_set_id
-        // some profiles have more optional data we don't need
-        if (profileIdc === 100 ||
-            profileIdc === 110 ||
-            profileIdc === 122 ||
-            profileIdc === 244 ||
-            profileIdc === 44 ||
-            profileIdc === 83 ||
-            profileIdc === 86 ||
-            profileIdc === 118 ||
-            profileIdc === 128) {
-            var chromaFormatIdc = decoder.readUEG();
-            if (chromaFormatIdc === 3) {
-                decoder.skipBits(1); // separate_colour_plane_flag
+        let pic_width_in_luma_samples = decoder.readUEG();
+        let pic_height_in_luma_samples = decoder.readUEG();
+
+        // Cropping
+        let conformance_window_flag = decoder.readBoolean();
+        let conf_win_left_offset = 0, conf_win_right_offset = 0, conf_win_top_offset = 0, conf_win_bottom_offset = 0;
+        if (conformance_window_flag) {
+            conf_win_left_offset = decoder.readUEG();
+            conf_win_right_offset = decoder.readUEG();
+            conf_win_top_offset = decoder.readUEG();
+            conf_win_bottom_offset = decoder.readUEG();
+        }
+
+        let fps = null;
+        let vui_parameters_present_flag = decoder.readBoolean();
+        if (vui_parameters_present_flag) {
+            let aspect_ratio_info_present_flag = decoder.readBoolean();
+            if (aspect_ratio_info_present_flag) {
+                let aspect_ratio_idc = decoder.readUByte();
+                if (aspect_ratio_idc === 255) { // Extended_SAR
+                    decoder.readUShort(); // sar_width
+                    decoder.readUShort(); // sar_height
+                }
             }
-            decoder.skipUEG(); // bit_depth_luma_minus8
-            decoder.skipUEG(); // bit_depth_chroma_minus8
-            decoder.skipBits(1); // qpprime_y_zero_transform_bypass_flag
-            if (decoder.readBoolean()) { // seq_scaling_matrix_present_flag
-                scalingListCount = (chromaFormatIdc !== 3) ? 8 : 12;
-                for (let i = 0; i < scalingListCount; ++i) {
-                    if (decoder.readBoolean()) { // seq_scaling_list_present_flag[ i ]
-                        if (i < 6) {
-                            H264Parser.skipScalingList(decoder, 16);
-                        } else {
-                            H264Parser.skipScalingList(decoder, 64);
-                        }
-                    }
+            let overscan_info_present_flag = decoder.readBoolean();
+            if (overscan_info_present_flag) {
+                decoder.readBoolean(); // overscan_appropriate_flag
+            }
+            let video_signal_type_present_flag = decoder.readBoolean();
+            if (video_signal_type_present_flag) {
+                decoder.readBits(3); // video_format
+                decoder.readBoolean(); // video_full_range_flag
+                let colour_description_present_flag = decoder.readBoolean();
+                if (colour_description_present_flag) {
+                    decoder.readUByte(); // colour_primaries
+                    decoder.readUByte(); // transfer_characteristics
+                    decoder.readUByte(); // matrix_coeffs
+                }
+            }
+            let chroma_loc_info_present_flag = decoder.readBoolean();
+            if (chroma_loc_info_present_flag) {
+                decoder.readUEG(); // chroma_sample_loc_type_top_field
+                decoder.readUEG(); // chroma_sample_loc_type_bottom_field
+            }
+            decoder.readBoolean(); // neutral_chroma_indication_flag
+            decoder.readBoolean(); // field_seq_flag
+            decoder.readBoolean(); // frame_field_info_present_flag
+
+            // Timing info
+            let timing_info_present_flag = decoder.readBoolean();
+            if (timing_info_present_flag) {
+                let num_units_in_tick = decoder.readUInt();
+                let time_scale = decoder.readUInt();
+                decoder.readBoolean(); // poc_proportional_to_timing_flag
+                if (num_units_in_tick) {
+                    fps = time_scale / (2 * num_units_in_tick);
                 }
             }
         }
-        decoder.skipUEG(); // log2_max_frame_num_minus4
-        var picOrderCntType = decoder.readUEG();
-        if (picOrderCntType === 0) {
-            decoder.readUEG(); // log2_max_pic_order_cnt_lsb_minus4
-        } else if (picOrderCntType === 1) {
-            decoder.skipBits(1); // delta_pic_order_always_zero_flag
-            decoder.skipEG(); // offset_for_non_ref_pic
-            decoder.skipEG(); // offset_for_top_to_bottom_field
-            numRefFramesInPicOrderCntCycle = decoder.readUEG();
-            for (let i = 0; i < numRefFramesInPicOrderCntCycle; ++i) {
-                decoder.skipEG(); // offset_for_ref_frame[ i ]
-            }
-        }
-        decoder.skipUEG(); // max_num_ref_frames
-        decoder.skipBits(1); // gaps_in_frame_num_value_allowed_flag
-        picWidthInMbsMinus1 = decoder.readUEG();
-        picHeightInMapUnitsMinus1 = decoder.readUEG();
-        frameMbsOnlyFlag = decoder.readBits(1);
-        if (frameMbsOnlyFlag === 0) {
-            decoder.skipBits(1); // mb_adaptive_frame_field_flag
-        }
-        decoder.skipBits(1); // direct_8x8_inference_flag
-        if (decoder.readBoolean()) { // frame_cropping_flag
-            frameCropLeftOffset = decoder.readUEG();
-            frameCropRightOffset = decoder.readUEG();
-            frameCropTopOffset = decoder.readUEG();
-            frameCropBottomOffset = decoder.readUEG();
-        }
-        if (decoder.readBoolean()) {
-            // vui_parameters_present_flag
-            if (decoder.readBoolean()) {
-                // aspect_ratio_info_present_flag
-                let sarRatio;
-                const aspectRatioIdc = decoder.readUByte();
-                switch (aspectRatioIdc) {
-                    case 1: sarRatio = [1, 1]; break;
-                    case 2: sarRatio = [12, 11]; break;
-                    case 3: sarRatio = [10, 11]; break;
-                    case 4: sarRatio = [16, 11]; break;
-                    case 5: sarRatio = [40, 33]; break;
-                    case 6: sarRatio = [24, 11]; break;
-                    case 7: sarRatio = [20, 11]; break;
-                    case 8: sarRatio = [32, 11]; break;
-                    case 9: sarRatio = [80, 33]; break;
-                    case 10: sarRatio = [18, 11]; break;
-                    case 11: sarRatio = [15, 11]; break;
-                    case 12: sarRatio = [64, 33]; break;
-                    case 13: sarRatio = [160, 99]; break;
-                    case 14: sarRatio = [4, 3]; break;
-                    case 15: sarRatio = [3, 2]; break;
-                    case 16: sarRatio = [2, 1]; break;
-                    case 255: {
-                        sarRatio = [decoder.readUByte() << 8 | decoder.readUByte(), decoder.readUByte() << 8 | decoder.readUByte()];
-                        break;
-                    }
-                }
-                if (sarRatio && sarRatio[0] > 0 && sarRatio[1] > 0) {
-                    sarScale = sarRatio[0] / sarRatio[1];
-                }
-            }
-            if (decoder.readBoolean()) { decoder.skipBits(1); }
 
-            if (decoder.readBoolean()) {
-                decoder.skipBits(4);
-                if (decoder.readBoolean()) {
-                    decoder.skipBits(24);
-                }
-            }
-            if (decoder.readBoolean()) {
-                decoder.skipUEG();
-                decoder.skipUEG();
-            }
-            if (decoder.readBoolean()) {
-                let unitsInTick = decoder.readUInt();
-                let timeScale = decoder.readUInt();
-                let fixedFrameRate = decoder.readBoolean();
-                let frameDuration = timeScale / (2 * unitsInTick);
+        // Final width/height
+        let sub_width_c = (chroma_format_idc === 1 || chroma_format_idc === 2) ? 2 : 1;
+        let sub_height_c = (chroma_format_idc === 1) ? 2 : 1;
+        let width = pic_width_in_luma_samples - sub_width_c * (conf_win_right_offset + conf_win_left_offset);
+        let height = pic_height_in_luma_samples - sub_height_c * (conf_win_top_offset + conf_win_bottom_offset);
 
-                if (fixedFrameRate) {
-                    fps = frameDuration;
-                }
-            }
-        }
         return {
-            fps: fps > 0 ? fps : undefined,
-            width: Math.ceil((((picWidthInMbsMinus1 + 1) * 16) - frameCropLeftOffset * 2 - frameCropRightOffset * 2) * sarScale),
-            height: ((2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16) - ((frameMbsOnlyFlag ? 2 : 4) * (frameCropTopOffset + frameCropBottomOffset)),
+            width,
+            height,
+            profile_space,
+            tier_flag,
+            profile_idc,
+            profile_compatibility_flags,
+            constraint_indicator_flags,
+            level_idc,
+            chroma_format_idc,
+            fps,
         };
     }
-    static parseHeader(unit) {
-        let decoder = new ExpGolomb(unit.getPayload());
-        // skip NALu type
-        decoder.readUByte();
-        unit.isfmb = decoder.readUEG() === 0;
-        unit.stype = decoder.readUEG();
-    }
-    
+
 }
 
 export class NALU265 {
@@ -282,31 +223,65 @@ export class NALU265 {
         };
     }
 
-    static type(nalu) {
-        if (nalu.ntype in NALU265.TYPES) {
-            return NALU265.TYPES[nalu.ntype];
-        } else {
-            return 'UNKNOWN';
-        }
-    }
-
     constructor(data) {
         this.payload = data;
         this.nalUnitType = (data[0] & 0b01111110) >> 1;
         this.nuhLayerId = ((data[0] & 0b00000001) << 5) | ((data[1] & 0b11111000) >> 3);
         this.nuhTemporalIdPlus1 = data[1] & 0b00000111;
+        this._isFirstSlice = null;
+        this._sliceType = null;
     }
 
     toString() {
-        return `${NALU265.type(this)}: Layer: ${this.nuhLayerId}, Temporal Id: ${this.nuhLayerId}`;
+        return `${NALU265.TYPES[this] || 'UNKNOWN'}: Layer: ${this.nuhLayerId}, Temporal Id: ${this.nuhTemporalIdPlus1}`;
     }
 
     type() {
         return this.nalUnitType;
     }
 
-    isKeyframe() {
-        return this.nalUnitType === NALU265.IDR_W_RADL || this.nalUnitType === NALU265.IDR_N_LP;
+    get isKeyframe() {
+        return [
+            NALU265.IDR_W_RADL,
+            NALU265.IDR_N_LP,
+            NALU265.CRA
+        ].includes(this.nalUnitType);
+    }
+
+    get isVCL() {
+        return this.nalUnitType <=31;
+    }
+
+    parseHeader() {
+        let decoder = new ExpGolomb(this.getPayload());
+
+        // first_slice_segment_in_pic_flag
+        this._isFirstSlice = decoder.readBits(1) === 1;
+
+        // if NALU is not IDR/CRA/other IRAP, next comes no_output_of_prior_pics_flag
+        if (this.isKeyframe) {
+            decoder.readBits(1); // no_output_of_prior_pics_flag
+        }
+
+        // slice_pic_parameter_set_id
+        decoder.readUEG();
+
+        // slice_type (only for some NALU types, but useful for debugging)
+        this._sliceType = decoder.readUEG();
+    }
+
+    get isFirstSlice() {
+        if (!this._isFirstSlice) {
+            this.parseHeader();
+        }
+        return this._isFirstSlice;
+    }
+
+    get sliceType() {
+        if (!this._sliceType) {
+            this.parseHeader();
+        }
+        return this._sliceType;
     }
     
     getPayload() {

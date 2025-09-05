@@ -14,6 +14,7 @@ export class MP4 {
             esds: [],
             ftyp: [],
             hdlr: [],
+            hev1: [],
             mdat: [],
             mdhd: [],
             mdia: [],
@@ -377,84 +378,66 @@ export class MP4 {
     }
     
     static hev1(track) {
-        var vps = [],
+        let vps = [],
             sps = [],
             pps = [],
-            i,
             data,
             len;
 
         // assemble the VPSs
-        for (i = 0; i < track.vps.length; i++) {
+        for (let i = 0; i < (track.vps?.length || 0); i++) {
             data = track.vps[i];
             len = data.byteLength;
-            vps.push((len >>> 8) & 0xFF);
-            vps.push(len & 0xFF);
+            vps.push((len >>> 8) & 0xFF, len & 0xFF);
             vps = vps.concat(Array.prototype.slice.call(data));
         }
 
         // assemble the SPSs
-        for (i = 0; i < track.sps.length; i++) {
+        for (let i = 0; i < (track.sps?.length || 0); i++) {
             data = track.sps[i];
             len = data.byteLength;
-            sps.push((len >>> 8) & 0xFF);
-            sps.push(len & 0xFF);
+            sps.push((len >>> 8) & 0xFF, len & 0xFF);
             sps = sps.concat(Array.prototype.slice.call(data));
         }
 
         // assemble the PPSs
-        for (i = 0; i < track.pps.length; i++) {
+        for (let i = 0; i < (track.pps?.length || 0); i++) {
             data = track.pps[i];
             len = data.byteLength;
-            pps.push((len >>> 8) & 0xFF);
-            pps.push(len & 0xFF);
+            pps.push((len >>> 8) & 0xFF, len & 0xFF);
             pps = pps.concat(Array.prototype.slice.call(data));
         }
 
-        // auto-parse profile/tier/level from SPS
-        var spsData = track.sps[0];
-        var general_profile_space = (spsData[1] >> 6) & 0x03;
-        var general_tier_flag = (spsData[1] >> 5) & 0x01;
-        var general_profile_idc = spsData[1] & 0x1F;
-        var general_level_idc = spsData[12]; // level_idc is at byte 12 of SPS
+        let {
+            profile_space,
+            tier_flag,
+            profile_idc,
+            profile_compatibility_flags,
+            constraint_indicator_flags,
+            level_idc,
+            chroma_format_idc
+        } = track.hvcC;
 
-        // compatibility flags (bytes 2-5)
-        var general_profile_compatibility_flags =
-            (spsData[2] << 24) |
-            (spsData[3] << 16) |
-            (spsData[4] << 8) |
-            (spsData[5]);
-
-        // constraint indicator flags (bytes 6-11)
-        var general_constraint_indicator_flags =
-            (spsData[6] << 40) |
-            (spsData[7] << 32) |
-            (spsData[8] << 24) |
-            (spsData[9] << 16) |
-            (spsData[10] << 8) |
-            (spsData[11]);
-
-        // build the hvcC box
-        var hvcc = MP4.box(MP4.types.hvcC, new Uint8Array([
+        const hvcc = MP4.box(MP4.types.hvcC, new Uint8Array([
             0x01, // configurationVersion
-            (general_profile_space << 6) | (general_tier_flag << 5) | general_profile_idc,
-            (general_profile_compatibility_flags >> 24) & 0xFF,
-            (general_profile_compatibility_flags >> 16) & 0xFF,
-            (general_profile_compatibility_flags >> 8) & 0xFF,
-            general_profile_compatibility_flags & 0xFF,
-            (general_constraint_indicator_flags >> 40) & 0xFF,
-            (general_constraint_indicator_flags >> 32) & 0xFF,
-            (general_constraint_indicator_flags >> 24) & 0xFF,
-            (general_constraint_indicator_flags >> 16) & 0xFF,
-            (general_constraint_indicator_flags >> 8) & 0xFF,
-            general_constraint_indicator_flags & 0xFF,
-            general_level_idc,
+            (profile_space << 6) | (tier_flag << 5) | profile_idc,
+            (profile_compatibility_flags >> 24) & 0xFF,
+            (profile_compatibility_flags >> 16) & 0xFF,
+            (profile_compatibility_flags >> 8) & 0xFF,
+            profile_compatibility_flags & 0xFF,
+            Number((constraint_indicator_flags >> 40n) & 0xFFn),
+            Number((constraint_indicator_flags >> 32n) & 0xFFn),
+            Number((constraint_indicator_flags >> 24n) & 0xFFn),
+            Number((constraint_indicator_flags >> 16n) & 0xFFn),
+            Number((constraint_indicator_flags >> 8n) & 0xFFn),
+            Number(constraint_indicator_flags & 0xFFn),
+            level_idc,
             0xF0, 0x00, // min_spatial_segmentation_idc = 0
             0xFC | 0,   // parallelismType = 0
-            0xFC | 1,   // chromaFormat = 1 (4:2:0)
+            0xFC | chroma_format_idc, // chromaFormat (from SPS)
             0xF8 | 0,   // bitDepthLumaMinus8 = 0 (8-bit)
             0xF8 | 0,   // bitDepthChromaMinus8 = 0
-            0x00, 0x00, // avgFrameRate = 0
+            0x00, 0x00, // avgFrameRate = 0 (unless you want to use track.fps*1000)
             0x00,       // constantFrameRate, numTemporalLayers, etc.
             0x03,       // numOfArrays
 
@@ -471,8 +454,8 @@ export class MP4 {
             ...pps
         ]));
 
-        var width = track.width,
-            height = track.height;
+        const width = track.width;
+        const height = track.height;
 
         return MP4.box(MP4.types.hev1, new Uint8Array([
             0x00, 0x00, 0x00, // reserved
@@ -483,10 +466,8 @@ export class MP4 {
             0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, // pre_defined
-            (width >> 8) & 0xFF,
-            width & 0xff, // width
-            (height >> 8) & 0xFF,
-            height & 0xff, // height
+            (width >> 8) & 0xFF, width & 0xff,
+            (height >> 8) & 0xFF, height & 0xff,
             0x00, 0x48, 0x00, 0x00, // horizresolution
             0x00, 0x48, 0x00, 0x00, // vertresolution
             0x00, 0x00, 0x00, 0x00, // reserved

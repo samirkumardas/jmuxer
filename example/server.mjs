@@ -48,15 +48,42 @@ app.use(express.static('.'));
 const PORT = process.env.PORT || 8080;
 const minNaluPerChunk = 30
 
-const buffer = await fs.readFile('./demo.h264');
-const chunks = extractChunks(buffer);
+const bufferH264 = await fs.readFile('./demo.h264');
+const chunksH264 = extractChunks(bufferH264);
+
+const bufferH265 = await fs.readFile('./demo.h265');
+const chunksH265 = extractChunks(bufferH265);
 
 app.ws('/', async (ws, req) => {
     let current = 0;
 
     const sendChunk = async () => {
-        const chunk = buffer.slice(current == 0 ? 0 : chunks[current - 1], chunks[current]);
-        current = (current + 1) % chunks.length;
+        const chunk = bufferH264.slice(current == 0 ? 0 : chunksH264[current - 1], chunksH264[current]);
+        current = (current + 1) % chunksH264.length;
+        ws.send(chunk);
+    }
+
+    const interval = setInterval(function() {
+        sendChunk();
+    }, 1500);
+
+    ws.on('close', () => {
+        console.log('Socket closed, stopping stream');
+        clearInterval(interval);
+    });
+
+    ws.on('error', (err) => {
+        console.log('Socket error, stopping stream', err);
+        clearInterval(interval);
+    });
+});
+
+app.ws('/H265', async (ws, req) => {
+    let current = 0;
+
+    const sendChunk = async () => {
+        const chunk = bufferH265.slice(current == 0 ? 0 : chunksH265[current - 1], chunksH265[current]);
+        current = (current + 1) % chunksH265.length;
         ws.send(chunk);
     }
 
@@ -88,8 +115,8 @@ app.ws('/stream', async (ws, req) => {
     let current = 0;
 
     const feedChunk = () => {
-        const chunk = buffer.slice(current == 0 ? 0 : chunks[current - 1], chunks[current]);
-        current = (current + 1) % chunks.length;
+        const chunk = bufferH264.slice(current == 0 ? 0 : chunksH264[current - 1], chunksH264[current]);
+        current = (current + 1) % chunksH264.length;
         jmuxer.feed({
             video: chunk,
         });
