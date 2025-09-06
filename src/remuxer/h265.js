@@ -137,7 +137,6 @@ export class H265Remuxer extends BaseRemuxer {
         return frames;
     }
 
-
     remux(frames) {
         for (let frame of frames) {
             let units = [];
@@ -209,6 +208,7 @@ export class H265Remuxer extends BaseRemuxer {
     }
 
     parseSPS(sps) {
+        sps = H265Parser.removeEmulationPreventionBytes(sps);
         const config = H265Parser.readSPS(new Uint8Array(sps));
 
         this.mp4track.fps = config.fps || this.mp4track.fps;
@@ -234,11 +234,11 @@ export class H265Remuxer extends BaseRemuxer {
     }
 
     parsePPS(pps) {
-        this.mp4track.pps = [new Uint8Array(pps)];
+        this.mp4track.pps = [H265Parser.removeEmulationPreventionBytes(pps)];
     }
 
     parseVPS(vps) {
-        this.mp4track.vps = [new Uint8Array(vps)];
+        this.mp4track.vps = [H265Parser.removeEmulationPreventionBytes(vps)];
     }
 
     parseNAL(unit) {

@@ -55,26 +55,31 @@ export class H265Parser {
         return [result, left];
     }
 
-    /**
-     * Advance the ExpGolomb decoder past a scaling list. The scaling
-     * list is optionally transmitted as part of a sequence parameter
-     * set and is not relevant to transmuxing.
-     * @param decoder {ExpGolomb} exp golomb decoder
-     * @param count {number} the number of entries in this scaling list
-     * @see Recommendation ITU-T H.264, Section 7.3.2.1.1.1
-     */
-    static skipScalingList(decoder, count) {
-        let lastScale = 8,
-            nextScale = 8,
-            deltaScale;
-        for (let j = 0; j < count; j++) {
-            if (nextScale !== 0) {
-                deltaScale = decoder.readEG();
-                nextScale = (lastScale + deltaScale + 256) % 256;
+    static removeEmulationPreventionBytes(nal) {
+        const rbsp = [];
+        let zeroCount = 0;
+
+        for (let i = 0; i < nal.length; i++) {
+            const value = nal[i];
+
+            if (zeroCount === 2 && value === 0x03) {
+                // Skip this emulation prevention byte
+                zeroCount = 0;
+                continue;
             }
-            lastScale = (nextScale === 0) ? lastScale : nextScale;
+
+            rbsp.push(value);
+
+            if (value === 0x00) {
+                zeroCount++;
+            } else {
+                zeroCount = 0;
+            }
         }
+
+        return new Uint8Array(rbsp);
     }
+
 
     /**
      * Read a sequence parameter set and return some interesting video
