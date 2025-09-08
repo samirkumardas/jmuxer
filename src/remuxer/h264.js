@@ -54,7 +54,7 @@ export class H264Remuxer extends BaseRemuxer {
             return true;
         } else {
             debug.error('Failed to extract any NAL units from video data:', left);
-            this.dispach('outOfData');
+            this.dispatch('outOfData');
             return false;
         }
     }

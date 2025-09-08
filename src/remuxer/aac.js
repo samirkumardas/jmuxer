@@ -45,7 +45,7 @@ export class AACRemuxer extends BaseRemuxer {
             return true;
         } else {
             debug.error('Failed to extract audio data from:', data);
-            this.dispach('outOfData');
+            this.dispatch('outOfData');
             return false;
         }
     }
