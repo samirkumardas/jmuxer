@@ -15,6 +15,7 @@ export class MP4 {
             ftyp: [],
             hdlr: [],
             hev1: [],
+            hvcC: [],
             mdat: [],
             mdhd: [],
             mdia: [],
@@ -425,20 +426,15 @@ export class MP4 {
             (profile_compatibility_flags >> 16) & 0xFF,
             (profile_compatibility_flags >> 8) & 0xFF,
             profile_compatibility_flags & 0xFF,
-            Number((constraint_indicator_flags >> 40n) & 0xFFn),
-            Number((constraint_indicator_flags >> 32n) & 0xFFn),
-            Number((constraint_indicator_flags >> 24n) & 0xFFn),
-            Number((constraint_indicator_flags >> 16n) & 0xFFn),
-            Number((constraint_indicator_flags >> 8n) & 0xFFn),
-            Number(constraint_indicator_flags & 0xFFn),
+            ...constraint_indicator_flags,
             level_idc,
             0xF0, 0x00, // min_spatial_segmentation_idc = 0
             0xFC | 0,   // parallelismType = 0
             0xFC | chroma_format_idc, // chromaFormat (from SPS)
             0xF8 | 0,   // bitDepthLumaMinus8 = 0 (8-bit)
             0xF8 | 0,   // bitDepthChromaMinus8 = 0
-            0x00, 0x00, // avgFrameRate = 0 (unless you want to use track.fps*1000)
-            0x00,       // constantFrameRate, numTemporalLayers, etc.
+            0x00, 0x00, // avgFrameRate = 0
+            0x03,       // constantFrameRate = 0, numTemporalLayers = 0, lengthSizeMinusOne = 3 (AKA 4)
             0x03,       // numOfArrays
 
             0x20,       // array_completeness + NAL_unit_type (32 = VPS)
@@ -561,6 +557,9 @@ export class MP4 {
         if (track.type === 'audio') {
             return MP4.box(MP4.types.stsd, MP4.STSD, MP4.mp4a(track));
         } else {
+            if (track.codec.startsWith('hvc1')) {
+                return MP4.box(MP4.types.stsd, MP4.STSD, MP4.hev1(track));
+            }
             return MP4.box(MP4.types.stsd, MP4.STSD, MP4.avc1(track));
         }
     }

@@ -89,7 +89,7 @@ app.ws('/H265', async (ws, req) => {
 
     const interval = setInterval(function() {
         sendChunk();
-    }, 1500);
+    }, 1000);
 
     ws.on('close', () => {
         console.log('Socket closed, stopping stream');

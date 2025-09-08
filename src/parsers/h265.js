@@ -107,10 +107,10 @@ export class H265Parser {
         let profile_idc = decoder.readBits(5);
 
         let profile_compatibility_flags = decoder.readUInt(); // 32 bits
-        let constraint_indicator_flags_high = decoder.readUInt(); // 32 bits
-        let constraint_indicator_flags_low = decoder.readUShort(); // 16 bits
-        let constraint_indicator_flags = 
-            (BigInt(constraint_indicator_flags_high) << 16n) | BigInt(constraint_indicator_flags_low);
+        let constraint_indicator_flags = new Uint8Array(6);
+        for (let i = 0; i < 6; i++) {
+            constraint_indicator_flags[i] = decoder.readUByte();
+        }
 
         let level_idc = decoder.readUByte();
 
@@ -204,6 +204,8 @@ export class H265Parser {
 }
 
 export class NALU265 {
+    static get TRAIL_N()     { return  0; }
+    static get TRAIL_R()     { return  1; }
     static get IDR_W_RADL()  { return 19; }
     static get IDR_N_LP()    { return 20; }
     static get CRA()         { return 21; }
@@ -216,6 +218,8 @@ export class NALU265 {
 
     static get TYPES() {
         return {
+            [NALU265.TRAIL_N]:     'TRAIL_N',
+            [NALU265.TRAIL_R]:     'TRAIL_R',
             [NALU265.IDR_W_RADL]:  'IDR',
             [NALU265.IDR_N_LP]:    'IDR2',
             [NALU265.CRA]:         'CRA',
@@ -238,7 +242,7 @@ export class NALU265 {
     }
 
     toString() {
-        return `${NALU265.TYPES[this] || 'UNKNOWN'}: Layer: ${this.nuhLayerId}, Temporal Id: ${this.nuhTemporalIdPlus1}`;
+        return `${NALU265.TYPES[this.type()] || 'UNKNOWN (' + this.type() + ')'}: Layer: ${this.nuhLayerId}, Temporal Id: ${this.nuhTemporalIdPlus1}`;
     }
 
     type() {
@@ -259,9 +263,12 @@ export class NALU265 {
 
     parseHeader() {
         let decoder = new ExpGolomb(this.getPayload());
+        // skip NALu type
+        decoder.readUByte();
+        decoder.readUByte();
 
         // first_slice_segment_in_pic_flag
-        this._isFirstSlice = decoder.readBits(1) === 1;
+        this._isFirstSlice = decoder.readBoolean();
 
         // if NALU is not IDR/CRA/other IRAP, next comes no_output_of_prior_pics_flag
         if (this.isKeyframe) {

@@ -156,6 +156,7 @@ export class H265Remuxer extends BaseRemuxer {
                     duration: frame.duration,
                     compositionTimeOffset: frame.compositionTimeOffset
                 });
+                //console.log(JSON.parse(JSON.stringify(this.samples)));
             }
         }
     }
@@ -208,19 +209,18 @@ export class H265Remuxer extends BaseRemuxer {
     }
 
     parseSPS(sps) {
+        this.mp4track.sps = [new Uint8Array(sps)];
+        
         sps = H265Parser.removeEmulationPreventionBytes(sps);
         const config = H265Parser.readSPS(new Uint8Array(sps));
 
         this.mp4track.fps = config.fps || this.mp4track.fps;
         this.mp4track.width = config.width;
         this.mp4track.height = config.height;
-        this.mp4track.sps = [new Uint8Array(sps)];
-
-        console.log(config);
 
         this.mp4track.codec = `hvc1.${config.profile_idc}.${config.profile_compatibility_flags.toString(16)}`
             + `.L${config.level_idc}${config.tier_flag ? 'H' : 'L'}`
-            + `.${config.constraint_indicator_flags.toString(16)}`;
+            + `.${config.constraint_indicator_flags.map(b => b.toString(16)).join('.').toUpperCase()}`;
 
         this.mp4track.hvcC = {
             profile_space: config.profile_space,
@@ -234,11 +234,11 @@ export class H265Remuxer extends BaseRemuxer {
     }
 
     parsePPS(pps) {
-        this.mp4track.pps = [H265Parser.removeEmulationPreventionBytes(pps)];
+        this.mp4track.pps = [pps];
     }
 
     parseVPS(vps) {
-        this.mp4track.vps = [H265Parser.removeEmulationPreventionBytes(vps)];
+        this.mp4track.vps = [vps];
     }
 
     parseNAL(unit) {

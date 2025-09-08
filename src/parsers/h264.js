@@ -278,7 +278,7 @@ export class NALU264 {
     }
 
     toString() {
-        return `${NALU264.TYPES[this] || 'UNKNOWN'}: NRI: ${this.getNri()}`;
+        return `${NALU264.TYPES[this.type()] || 'UNKNOWN'}: NRI: ${this.getNri()}`;
     }
 
     getNri() {

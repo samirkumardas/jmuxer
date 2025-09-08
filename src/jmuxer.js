@@ -247,7 +247,7 @@ export default class JMuxer extends Event {
         if (this.node.buffered && this.node.buffered.length > 0 && !this.node.seeking) {
             const end = this.node.buffered.end(0);
             if (end - this.node.currentTime > (this.options.maxDelay / 1000)) {
-                console.log('delay');
+                debug.log('delay');
                 this.node.currentTime = end - 0.001;
             }
         }
