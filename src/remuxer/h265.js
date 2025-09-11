@@ -156,7 +156,6 @@ export class H265Remuxer extends BaseRemuxer {
                     duration: frame.duration,
                     compositionTimeOffset: frame.compositionTimeOffset
                 });
-                //console.log(JSON.parse(JSON.stringify(this.samples)));
             }
         }
     }
