@@ -8,50 +8,35 @@ export class H264Parser {
     static extractNALu(buffer) {
         let i = 0,
             length = buffer.byteLength,
-            value,
-            state = 0,
             result = [],
-            left,
-            lastIndex = 0;
+            lastIndex = 0,
+            zeroCount = 0;
 
         while (i < length) {
-            value = buffer[i++];
-            // finding 3 or 4-byte start codes (00 00 01 OR 00 00 00 01)
-            switch (state) {
-                case 0:
-                    if (value === 0) {
-                        state = 1;
-                    }
-                    break;
-                case 1:
-                    if (value === 0) {
-                        state = 2;
-                    } else {
-                        state = 0;
-                    }
-                    break;
-                case 2:
-                case 3:
-                    if (value === 0) {
-                        state = 3;
-                    } else if (value === 1 && i < length) {
-                        if (lastIndex != i - state -1) {
-                            result.push(buffer.subarray(lastIndex, i - state -1));
-                        }
-                        lastIndex = i;
-                        state = 0;
-                    } else {
-                        state = 0;
-                    }
-                    break;
-                default:
-                    break;
+            let value = buffer[i++];
+
+            if (value === 0) {
+                zeroCount++;
+            } else if (value === 1 && zeroCount >= 2) {
+                let startCodeLength = zeroCount + 1;
+
+                if (lastIndex !== i - startCodeLength) {
+                    result.push(buffer.subarray(lastIndex, i - startCodeLength));
+                }
+
+                lastIndex = i;
+                zeroCount = 0;
+            } else {
+                zeroCount = 0;
             }
         }
 
+        // Remaining data after last start code
+        let left = null;
         if (lastIndex < length) {
             left = buffer.subarray(lastIndex, length);
         }
+
         return [result, left];
     }
 
