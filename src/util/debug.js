@@ -1,10 +1,10 @@
 let logger;
 let errorLogger;
 
-export function setLogger() {
+export function setLogger(log, err) {
     /*eslint-disable */
-    logger = console.log;
-    errorLogger = console.error;
+    logger = log;
+    errorLogger = err;
     /*eslint-enable */
 }
 

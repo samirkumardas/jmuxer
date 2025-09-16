@@ -1,51 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="description" content="jMuxer - a simple javascript mp4 muxer for non-standard streaming communications protocol">
-    <meta name="keywords" content="h264 player, mp4 player, mse, mp4 muxing, jmuxer, aac player">
-    <title>JMuxer stream demo</title>
-</head>
-<body>
-<p><b>Prerequisite command:</b> `node stream.js`</p>
-<div id="container" style="margin: 0 auto; text-align: center;">
-    <video style="border: 1px solid #333; max-width: 500px;" controls autoplay poster="images/loader-thumb.jpg" id="player"></video>
-</div>
-<script>
-var chunks = [];
-var video = document.getElementById('player');
-var mse = new (MediaSource || WebKitMediaSource)();
-var sourceBuffer;
-video.src = URL.createObjectURL(mse);
-mse.addEventListener('sourceopen', onMediaSourceOpen);
-function onMediaSourceOpen() {
-    sourceBuffer = mse.addSourceBuffer('video/mp4; codecs="avc1.4d401f"');
-    sourceBuffer.addEventListener('updateend', addMoreBuffer);
-    video.play();
-}
-
-function addMoreBuffer() {
-    if (sourceBuffer.updating || !chunks.length) {
-        return;
-    }
-    sourceBuffer.appendBuffer(chunks.shift());
-}
-
-window.onload = function() {
-    var socketURL = 'ws://localhost:8080';
-
-     var ws = new WebSocket(socketURL);
-     ws.binaryType = 'arraybuffer';
-     ws.addEventListener('message',function(event) {
-        chunks.push(new Uint8Array(event.data));
-        addMoreBuffer();
-     });
-
-     ws.addEventListener('error', function(e) {
-        console.log('Socket Error');
-     });
- }
- 
-</script>
-</body>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="description" content="jMuxer - a simple javascript mp4 muxer for non-standard streaming communications protocol">
+        <meta name="keywords" content="h264 player, mp4 player, mse, mp4 muxing, jmuxer, aac player">
+        <title>JMuxer stream demo</title>
+    </head>
+    <body>
+        <div id="container" style="margin: 0 auto; text-align: center;">
+            <div>
+                <h3>Demos:</h3>
+                <ul>
+                    <li><a href="/">Raw chunks sent from server, and muxed by client H264</a></li>
+                    <li><a href="/h265.html">Raw chunks sent from server, and muxed by client H265</a></li>
+                    <li><b>Muxed by server, fMP4 streamed from server</b></li>
+                    <li><a href="/h264-aac.html">Raw chunks sent from server, and muxed by the client with audio H264 + AAC</a></li>
+                </ul>
+            </div>
+            <div>
+                <video style="border: 1px solid #333; max-width: 500px;" controls autoplay muted poster="images/loader-thumb.jpg" id="player"></video>
+            </div>
+        </div>
+        <script>
+            var chunks = [];
+            var video = document.getElementById('player');
+            var mse = new (MediaSource || WebKitMediaSource)();
+            var sourceBuffer;
+            video.src = URL.createObjectURL(mse);
+            mse.addEventListener('sourceopen', onMediaSourceOpen);
+            function onMediaSourceOpen() {
+                sourceBuffer = mse.addSourceBuffer('video/mp4; codecs="avc1.4d401f"');
+                sourceBuffer.addEventListener('updateend', addMoreBuffer);
+                video.play();
+            }
+            
+            function addMoreBuffer() {
+                if (sourceBuffer.updating || !chunks.length) {
+                    return;
+                }
+                sourceBuffer.appendBuffer(chunks.shift());
+            }
+            
+            window.onload = function() {
+            var socketURL = '/stream';
+        
+                var ws = new WebSocket(socketURL);
+                ws.binaryType = 'arraybuffer';
+                ws.addEventListener('message',function(event) {
+                    chunks.push(new Uint8Array(event.data));
+                    addMoreBuffer();
+                });
+        
+                ws.addEventListener('error', function(e) {
+                    console.log('Socket Error');
+                });
+            }
+            
+        </script>
+    </body>
 </html>

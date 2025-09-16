@@ -1,7 +1,8 @@
 import * as debug from '../util/debug';
+import Event from '../util/event';
 
 let track_id = 1;
-export class BaseRemuxer {
+export class BaseRemuxer extends Event {
 
     static getTrackID() {
         return track_id++;

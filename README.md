@@ -28,6 +28,8 @@ Available options are:
 
 *mode* - Available values are: both, video and audio. Default is both
 
+*videoCodec* - Either H264 or H265 (browser must support H265 to work). Default is H264
+
 *flushingTime* - Buffer flushing time in milliseconds. Default value is 500 milliseconds. Set `flushingTime` to 0 if you want to flash buffer immediately or find any lag.
 
 *maxDelay* - Maximum delay time in milliseconds. Default value is 500 milliseconds.
@@ -44,11 +46,19 @@ Available options are:
 
 *onError* - function. Will be fired if jMuxer encounters any buffer related errors.
 
+*onUnsupportedCodec* - function. Will be fired when trying to play a codec that is not supported by the browser.
+
 *onMissingVideoFrames* - function. Will be fired if jMuxer encounters any missing video frames.
 
 *onMissingAudioFrames* - function. Will be fired if jMuxer encounters any missing audio frames.
 
+*onKeyframePosition* - function. Will be fired when a keyframe is detected thus the provided time is seekable.
+
 *debug* - true/false. Will print debug log in browser console. Default is false.
+
+*onLoggerLog* - function. When debug enabled, will be called to log basic information. Defaults to console.log
+
+*onLoggerErr* - function. When debug enabled, will be called to log errors information. Defaults to console.error
 
 **Complete example:**
 
@@ -78,7 +88,7 @@ Available options are:
 
 Media dataObject may have following properties:
 
-*video* - h264 buffer
+*video* - h264/h265 buffer
 
 *audio* - AAC buffer
 
@@ -178,39 +188,20 @@ jmuxer.feed({
 
 Demo Server and player example
 -----------
-A simple node server and some demo media data are available in the example directory. In the example, each chunk/packet is consist of 4 bytes of header and the payload following the header. The first two bytes of the header contain the chunk duration and remaining two bytes contain the audio data length. Packet format is shown in the image below:
+Two demos are given:
+1. Raw chunks from server, client does the muxing
+2. Muxed by server, fMP4 streamed from server
 
-**Packet format**
+To try them both, in the root directory run
+```bash
+npm i
+npm run dev
+```
+then navigate to `http://localhost:8080/
 
-|   2 bytes   |     2 bytes     |                |                 |
-|-------------|-----------------|----------------|-----------------|
-|Duration (ms)|Audio Data Length|Audio Data (AAC)|Video Data (H264)|
+You can read further details on how they work in `example/server.mjs`.
 
-A step guideline to obtain above the packet format from your mp4 file using ffmpeg:
-1. Spliting video into 2 seconds chunks: `ffmpeg -i input.mp4 -c copy -map 0 -segment_time 2 -f segment %03d.mp4`
-2. Extracting h264 for all chunks: `for f in *.mp4; do ffmpeg -i "$f" -vcodec copy -an -bsf:v h264_mp4toannexb "${f:0:3}.h264"; done`
-3. Extracting audio for all chunks: `for f in *.mp4; do ffmpeg -i "$f" -acodec copy -vn "${f:0:3}.aac"; done`
-4. Extracting duration for all chunks: `for f in *.mp4; do ffprobe "$f" -show_format 2>&1 | sed -n 's/duration=//p'; done`
-
-(see https://github.com/samirkumardas/jmuxer/issues/20#issuecomment-470855007)
-
-**How to run example?**
-
-Demo files are available in example directory. For running the example, first run the node server by following command:
-
-*cd example*
-
-*node server.js*
-
-then, visit *example/index.html* page using any webserver.
-
-Player Example for raw h264 only
------------
-Assuming you are still in `example` directory. Now run followngs:
-
-*node h264.js*
-
-then, visit *example/h264.html* page using any webserver.
+To generate the segments for the last demo, you can use the bash script in the chunks folder.
 
 How to build?
 ---------

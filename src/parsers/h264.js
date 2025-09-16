@@ -1,56 +1,42 @@
 import { ExpGolomb } from '../util/exp-golomb.js';
-import { NALU } from '../util/nalu.js';
 import * as debug from '../util/debug';
+
+// spec https://www.itu.int/rec/T-REC-H.264/
 
 export class H264Parser {
 
     static extractNALu(buffer) {
         let i = 0,
             length = buffer.byteLength,
-            value,
-            state = 0,
             result = [],
-            left,
-            lastIndex = 0;
+            lastIndex = 0,
+            zeroCount = 0;
 
         while (i < length) {
-            value = buffer[i++];
-            // finding 3 or 4-byte start codes (00 00 01 OR 00 00 00 01)
-            switch (state) {
-                case 0:
-                    if (value === 0) {
-                        state = 1;
-                    }
-                    break;
-                case 1:
-                    if (value === 0) {
-                        state = 2;
-                    } else {
-                        state = 0;
-                    }
-                    break;
-                case 2:
-                case 3:
-                    if (value === 0) {
-                        state = 3;
-                    } else if (value === 1 && i < length) {
-                        if (lastIndex != i - state -1) {
-                            result.push(buffer.subarray(lastIndex, i - state -1));
-                        }
-                        lastIndex = i;
-                        state = 0;
-                    } else {
-                        state = 0;
-                    }
-                    break;
-                default:
-                    break;
+            let value = buffer[i++];
+
+            if (value === 0) {
+                zeroCount++;
+            } else if (value === 1 && zeroCount >= 2) {
+                let startCodeLength = zeroCount + 1;
+
+                if (lastIndex !== i - startCodeLength) {
+                    result.push(buffer.subarray(lastIndex, i - startCodeLength));
+                }
+
+                lastIndex = i;
+                zeroCount = 0;
+            } else {
+                zeroCount = 0;
             }
         }
 
+        // Remaining data after last start code
+        let left = null;
         if (lastIndex < length) {
             left = buffer.subarray(lastIndex, length);
         }
+
         return [result, left];
     }
 
@@ -246,76 +232,95 @@ export class H264Parser {
             height: ((2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16) - ((frameMbsOnlyFlag ? 2 : 4) * (frameCropTopOffset + frameCropBottomOffset)),
         };
     }
-    static parseHeader(unit) {
-        let decoder = new ExpGolomb(unit.getPayload());
+    
+}
+
+export class NALU264 {
+    static get NDR() { return 1; }
+    static get IDR() { return 5; }
+    static get SEI() { return 6; }
+    static get SPS() { return 7; }
+    static get PPS() { return 8; }
+    static get AUD() { return 9; }
+
+    static get TYPES() {
+        return {
+            [NALU264.IDR]: 'IDR',
+            [NALU264.SEI]: 'SEI',
+            [NALU264.SPS]: 'SPS',
+            [NALU264.PPS]: 'PPS',
+            [NALU264.NDR]: 'NDR',
+            [NALU264.AUD]: 'AUD',
+        };
+    }
+
+    constructor(data) {
+        this.payload = data;
+        this.nri = (this.payload[0] & 0x60) >> 5; // nal_ref_idc
+        this.nalUnitType = this.payload[0] & 0x1f;
+        this._sliceType = null;
+        this._isFirstSlice = false;
+    }
+
+    toString() {
+        return `${NALU264.TYPES[this.type()] || 'UNKNOWN'}: NRI: ${this.getNri()}`;
+    }
+
+    getNri() {
+        return this.nri;
+    }
+
+    type() {
+        return this.nalUnitType;
+    }
+
+    get isKeyframe() {
+        return this.nalUnitType === NALU264.IDR;
+    }
+
+    get isVCL() {
+        return this.nalUnitType == NALU264.IDR || this.nalUnitType == NALU264.NDR;
+    }
+
+    parseHeader() {
+        let decoder = new ExpGolomb(this.getPayload());
         // skip NALu type
         decoder.readUByte();
-        unit.isfmb = decoder.readUEG() === 0;
-        unit.stype = decoder.readUEG();
-    }
-    constructor(remuxer) {
-        this.remuxer = remuxer;
-        this.track = remuxer.mp4track;
+        this._isFirstSlice = decoder.readUEG() === 0;
+        this._sliceType = decoder.readUEG();
     }
 
-    parseSPS(sps) {
-        var config = H264Parser.readSPS(new Uint8Array(sps));
-
-        this.track.fps = config.fps;
-        this.track.width = config.width;
-        this.track.height = config.height;
-        this.track.sps = [new Uint8Array(sps)];
-        this.track.codec = 'avc1.';
-
-        let codecarray = new DataView(sps.buffer, sps.byteOffset + 1, 4);
-        for (let i = 0; i < 3; ++i) {
-            var h = codecarray.getUint8(i).toString(16);
-            if (h.length < 2) {
-                h = '0' + h;
-            }
-            this.track.codec += h;
+    get isFirstSlice() {
+        if (!this._isFirstSlice) {
+            this.parseHeader();
         }
+        return this._isFirstSlice;
     }
 
-    parsePPS(pps) {
-        this.track.pps = [new Uint8Array(pps)];
-    }
-
-    parseNAL(unit) {
-        if (!unit) return false;
-
-        let push = false;
-        switch (unit.type()) {
-            case NALU.IDR:
-            case NALU.NDR:
-                push = true;
-                break;
-            case NALU.PPS:
-                if (!this.track.pps) {
-                    this.parsePPS(unit.getPayload());
-                    if (!this.remuxer.readyToDecode && this.track.pps && this.track.sps) {
-                        this.remuxer.readyToDecode = true;
-                    }
-                }
-                push = true;
-                break;
-            case NALU.SPS:
-                if (!this.track.sps) {
-                    this.parseSPS(unit.getPayload());
-                    if (!this.remuxer.readyToDecode && this.track.pps && this.track.sps) {
-                        this.remuxer.readyToDecode = true;
-                    }
-                }
-                push = true;
-                break;
-            case NALU.AUD:
-                debug.log('AUD - ignoing');
-                break;
-            case NALU.SEI:
-                debug.log('SEI - ignoing');
-                break;
-            default:
+    get sliceType() {
+        if (!this._sliceType) {
+            this.parseHeader();
         }
-        return push;
+        return this._sliceType;
+    }
+    
+    getPayload() {
+        return this.payload;
+    }
+
+    getPayloadSize() {
+        return this.payload.byteLength;
+    }
+
+    getSize() {
+        return 4 + this.getPayloadSize();
+    }
+
+    getData() {
+        const result = new Uint8Array(this.getSize());
+        const view = new DataView(result.buffer);
+        view.setUint32(0, this.getSize() - 4);
+        result.set(this.getPayload(), 4);
+        return result;
     }
 }
