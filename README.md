@@ -201,6 +201,7 @@ then navigate to `http://localhost:8080/
 
 You can read further details on how they work in `example/server.mjs`.
 
+To generate the segments for the last demo, you can use the bash script in the chunks folder.
 
 How to build?
 ---------

@@ -1,5 +1,5 @@
 /**
- * The following two demos are essentially very similar
+ * The following three demos are essentially very similar
  * 
  * 1. Raw chunks from server, client does the muxing
  * The advantage of the first demo is that 
@@ -25,6 +25,13 @@
  * sever needs to generate a "custom" stream for
  * each, meaning a lot more load for the server.
  * 
+ * 3. Is like the first one, but we send both
+ * audio and video together to be played
+ * simultaneously. To make the handling a bit
+ * easier we use msgpack to group the two
+ * streams in a sinle message.
+ * An alternative method would be socket.io,
+ * but it is more complex.
  * 
  * Both are perfectly valid approaches, it just
  * depends on your usecase and needs.
@@ -38,6 +45,7 @@
 import express from "express";
 import expressWs from "express-ws";
 import fs from "fs/promises";
+import { encode } from "msgpack-lite";
 import JMuxer from "./jmuxer.min.js";
 
 const app = express();
@@ -54,6 +62,8 @@ const chunksH264 = extractChunks(bufferH264);
 const bufferH265 = await fs.readFile('./demo.h265');
 const chunksH265 = extractChunks(bufferH265);
 
+const totalChunks = await fs.readdir('./chunks/').then(res => Math.max(...res.map(parseInt)));
+
 app.ws('/', async (ws, req) => {
     let current = 0;
 
@@ -63,7 +73,7 @@ app.ws('/', async (ws, req) => {
         ws.send(chunk);
     }
 
-    const interval = setInterval(function() {
+    const interval = setInterval(() => {
         sendChunk();
     }, 1500);
 
@@ -76,6 +86,8 @@ app.ws('/', async (ws, req) => {
         console.log('Socket error, stopping stream', err);
         clearInterval(interval);
     });
+
+    sendChunk();
 });
 
 app.ws('/H265', async (ws, req) => {
@@ -87,7 +99,7 @@ app.ws('/H265', async (ws, req) => {
         ws.send(chunk);
     }
 
-    const interval = setInterval(function() {
+    const interval = setInterval(() => {
         sendChunk();
     }, 1000);
 
@@ -100,6 +112,8 @@ app.ws('/H265', async (ws, req) => {
         console.log('Socket error, stopping stream', err);
         clearInterval(interval);
     });
+
+    sendChunk();
 });
 
 app.ws('/stream', async (ws, req) => {
@@ -137,6 +151,38 @@ app.ws('/stream', async (ws, req) => {
         clearInterval(interval);
         jmuxer.destroy();
     });
+
+    feedChunk();
+});
+
+app.ws('/H264-AAC', async (ws, req) => {
+    let current = 0;
+
+    const sendChunk = async () => {
+        const chunk = encode({
+            video: await fs.readFile(`./chunks/${('' + current).padStart(3, '0')}.h264`),
+            audio: await fs.readFile(`./chunks/${('' + current).padStart(3, '0')}.aac`),
+        });
+        current++;
+        ws.send(chunk);
+        if (current >= totalChunks) ws.close();
+    }
+
+    const interval = setInterval(() => {
+        sendChunk();
+    }, 10000);
+
+    ws.on('close', () => {
+        console.log('Socket closed, stopping stream');
+        clearInterval(interval);
+    });
+
+    ws.on('error', (err) => {
+        console.log('Socket error, stopping stream', err);
+        clearInterval(interval);
+    });
+
+    sendChunk();
 });
 
 // this is actually taken from the H264 parser implementation
