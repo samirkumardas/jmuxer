@@ -59,7 +59,6 @@ typings/
 
 # dotenv environment variables file
 .env
-
 .DS_Store
-
+.idea
 # End of https://www.gitignore.io/api/node
