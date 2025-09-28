@@ -6,6 +6,7 @@
     <meta name="keywords" content="h264 player, mp4 player, mse, mp4 muxing, jmuxer, aac player">
     <title>JMuxer demo</title>
     <script async defer src="https://buttons.github.io/buttons.js"></script>
+    <script src="https://rawgit.com/kawanet/msgpack-lite/master/dist/msgpack.min.js"></script>
     <style type="text/css">
         .github-tools {
             position: absolute;
@@ -42,43 +43,39 @@
     <div class="gesture">If it does not play automatically, Click the `video play button` to initiate the video</div>
     <a class="h264-player" href="https://samirkumardas.github.io/jmuxer/h264_player.html">Play a h264 file online</a>
 </div>
-
 <script>
+    var jmuxer;
+    window.onload = function() {
+        var socketURL = 'wss://samirdas.com/H264-AAC';
+        jmuxer = new JMuxer({
+            node: 'player',
+            mode: 'both',
+            flushingTime: 1000,
+            fps: 25,
+            debug: true,
+            onError: function(data) {
+                if (/Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor)) {
+                    jmuxer.reset();
+                }
+            }
+        });
+    
+        var ws = new WebSocket(socketURL);
+        ws.binaryType = 'arraybuffer';
+        ws.addEventListener('message',function(event) {
+            const chunk = msgpack.decode(new Uint8Array(event.data));
+            jmuxer.feed({...chunk, duration: 10000});
+        });
+    
+        ws.addEventListener('error', function(e) {
+            console.log('Socket Error');
+        });
 
-  function parse(data) {
-      var input = new Uint8Array(data),
-          dv = new DataView(input.buffer),
-          duration,
-          audioLength,
-          audio,
-          video;
-
-      duration = dv.getUint16(0, true);
-      audioLength = dv.getUint16(2, true);
-      audio = input.subarray(4, (audioLength + 4));
-      video = input.subarray(audioLength + 4);
-
-      return {
-        audio: audio,
-        video: video,
-        duration: duration
-      };
- }
-
- window.onload = function() {
-    var socketURL = 'wss://samirdas.com/jumxer';
-    var jmuxer = new JMuxer({
-        node: 'player',
-        debug: true
-     });
-
-     var ws = new WebSocket(socketURL);
-     ws.binaryType = 'arraybuffer';
-     ws.addEventListener('message',function(event) {
-          var data = parse(event.data);
-          jmuxer.feed(data);
-     });
- }   
+        ws.addEventListener('close', function() {
+            console.log('Stream ended');
+        });
+    }
+            
 </script>
 <script type="text/javascript" src="jmuxer.min.js"></script>
 </body>
