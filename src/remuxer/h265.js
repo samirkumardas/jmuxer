@@ -46,18 +46,26 @@ export class H265Remuxer extends BaseRemuxer {
         this.pendingUnits = {};
     }
 
-    feed(data, duration, compositionTimeOffset) {
+    feed(data, duration, compositionTimeOffset, isLastFrameComplete = false) {
         let slices = [];
         let left;
         data = appendByteArray(this.remainingData, data);
         [slices, left] = H265Parser.extractNALu(data);
-        this.remainingData = left || new Uint8Array();
+        if (left) {
+            if (isLastFrameComplete) {
+                slices.push(left);
+            } else {
+                this.remainingData = left;
+            }
+        } else {
+            this.remainingData = new Uint8Array();
+        }
     
         if (slices.length > 0) {
             this.remux(this.getVideoFrames(slices, duration, compositionTimeOffset));
             return true;
         } else {
-            debug.error('Failed to extract any NAL units from video data:', left);
+            debug.log('Failed to extract any NAL units from video data:', left);
             this.dispatch('outOfData');
             return false;
         }
