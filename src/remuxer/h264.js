@@ -76,6 +76,8 @@ export class H264Remuxer extends BaseRemuxer {
         for (let nalu of nalus) {
             let unit = new NALU264(nalu);
 
+            if (!this.parseNAL(unit)) continue;
+
             // frame boundary detection
             if (units.length && vcl && (unit.isFirstSlice || !unit.isVCL)) {
                 frames.push({
@@ -134,18 +136,11 @@ export class H264Remuxer extends BaseRemuxer {
 
     remux(frames) {
         for (let frame of frames) {
-            let units = [];
-            let size = 0;
-            for (let unit of frame.units) {
-                if (this.parseNAL(unit)) {
-                    units.push(unit);
-                    size += unit.getSize();
-                }
-            }
-            if (units.length > 0 && this.readyToDecode) {
+            let size = frame.units.reduce((acc, cur) => acc + cur.getSize(), 0);
+            if (frame.units.length > 0 && this.readyToDecode) {
                 this.mp4track.len += size;
                 this.samples.push({
-                    units: units,
+                    units: frame.units,
                     size: size,
                     keyFrame: frame.keyFrame,
                     duration: frame.duration,
