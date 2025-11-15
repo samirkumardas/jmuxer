@@ -1,7 +1,7 @@
 import * as debug from '../util/debug';
 import { H265Parser, NALU265 } from '../parsers/h265.js';
 import { BaseRemuxer } from './base.js';
-import { appendByteArray } from '../util/utils.js';
+import { appendByteArray, reverseBits, removeTrailingDotZero } from '../util/utils.js';
 
 export class H265Remuxer extends BaseRemuxer {
 
@@ -220,9 +220,12 @@ export class H265Remuxer extends BaseRemuxer {
         this.mp4track.width = config.width;
         this.mp4track.height = config.height;
 
-        this.mp4track.codec = `hvc1.${config.profile_idc}.${config.profile_compatibility_flags.toString(16)}`
-            + `.L${config.level_idc}${config.tier_flag ? 'H' : 'L'}`
-            + `.${config.constraint_indicator_flags.map(b => b.toString(16)).join('.').toUpperCase()}`;
+        this.mp4track.codec = 'hvc1'
+            + '.' + (config.profile_space ? String.fromCharCode(64 + config.profile_space) : '') // Map [0,1,2,3] to ['','A','B','C']
+            + config.profile_idc
+            + '.' + reverseBits(config.profile_compatibility_flags).toString(16)
+            + '.' + (config.tier_flag ? 'H' : 'L') + config.level_idc
+            + '.' + removeTrailingDotZero(config.constraint_indicator_flags.map(function (b) { return b.toString(16); }).join('.').toUpperCase());
 
         this.mp4track.hvcC = {
             profile_space: config.profile_space,
