@@ -54,6 +54,7 @@ export class H265Remuxer extends BaseRemuxer {
         if (left) {
             if (isLastFrameComplete) {
                 slices.push(left);
+                this.remainingData = new Uint8Array();
             } else {
                 this.remainingData = left;
             }
