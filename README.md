@@ -96,6 +96,8 @@ Media dataObject may have following properties:
 
 *compositionTimeOffset* - Composition time offset, difference between decode time and presentation time of frames, in milliseconds. This is only used for video and usually needed when B-frames are present in video stream.
 
+*isLastVideoFrameComplete* - true/false. whether the last frame in the buffer provided is complete and can be immediatly pushed to the remuxer. Frame in this context refers to a H264/H265 frame, which might or might not correspond to a frame of video. This flag allows to remove a 1 frame delay which is naturally present because jMuxer doesn't know if the data it received is complete unless the next NALU header is received; use this only if you are sure of it, otherwise issues may arrise. Defaults to false.
+
 **ES6 Example:**
 
 Install module through `npm`

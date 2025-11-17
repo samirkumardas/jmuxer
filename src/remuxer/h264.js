@@ -42,18 +42,26 @@ export class H264Remuxer extends BaseRemuxer {
         this.pendingUnits = {};
     }
 
-    feed(data, duration, compositionTimeOffset) {
+    feed(data, duration, compositionTimeOffset, isLastFrameComplete = false) {
         let slices = [];
         let left;
         data = appendByteArray(this.remainingData, data);
         [slices, left] = H264Parser.extractNALu(data);
-        this.remainingData = left || new Uint8Array();
+        if (left) {
+            if (isLastFrameComplete) {
+                slices.push(left);
+            } else {
+                this.remainingData = left;
+            }
+        } else {
+            this.remainingData = new Uint8Array();
+        }
     
         if (slices.length > 0) {
             this.remux(this.getVideoFrames(slices, duration, compositionTimeOffset));
             return true;
         } else {
-            debug.error('Failed to extract any NAL units from video data:', left);
+            debug.log('Failed to extract any NAL units from video data:', left);
             this.dispatch('outOfData');
             return false;
         }
@@ -75,6 +83,8 @@ export class H264Remuxer extends BaseRemuxer {
 
         for (let nalu of nalus) {
             let unit = new NALU264(nalu);
+
+            if (!this.parseNAL(unit)) continue;
 
             // frame boundary detection
             if (units.length && vcl && (unit.isFirstSlice || !unit.isVCL)) {
@@ -134,18 +144,11 @@ export class H264Remuxer extends BaseRemuxer {
 
     remux(frames) {
         for (let frame of frames) {
-            let units = [];
-            let size = 0;
-            for (let unit of frame.units) {
-                if (this.parseNAL(unit)) {
-                    units.push(unit);
-                    size += unit.getSize();
-                }
-            }
-            if (units.length > 0 && this.readyToDecode) {
+            let size = frame.units.reduce((acc, cur) => acc + cur.getSize(), 0);
+            if (frame.units.length > 0 && this.readyToDecode) {
                 this.mp4track.len += size;
                 this.samples.push({
-                    units: units,
+                    units: frame.units,
                     size: size,
                     keyFrame: frame.keyFrame,
                     duration: frame.duration,

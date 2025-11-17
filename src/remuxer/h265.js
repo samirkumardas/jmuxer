@@ -1,7 +1,7 @@
 import * as debug from '../util/debug';
 import { H265Parser, NALU265 } from '../parsers/h265.js';
 import { BaseRemuxer } from './base.js';
-import { appendByteArray } from '../util/utils.js';
+import { appendByteArray, reverseBits, removeTrailingDotZero } from '../util/utils.js';
 
 export class H265Remuxer extends BaseRemuxer {
 
@@ -46,18 +46,26 @@ export class H265Remuxer extends BaseRemuxer {
         this.pendingUnits = {};
     }
 
-    feed(data, duration, compositionTimeOffset) {
+    feed(data, duration, compositionTimeOffset, isLastFrameComplete = false) {
         let slices = [];
         let left;
         data = appendByteArray(this.remainingData, data);
         [slices, left] = H265Parser.extractNALu(data);
-        this.remainingData = left || new Uint8Array();
+        if (left) {
+            if (isLastFrameComplete) {
+                slices.push(left);
+            } else {
+                this.remainingData = left;
+            }
+        } else {
+            this.remainingData = new Uint8Array();
+        }
     
         if (slices.length > 0) {
             this.remux(this.getVideoFrames(slices, duration, compositionTimeOffset));
             return true;
         } else {
-            debug.error('Failed to extract any NAL units from video data:', left);
+            debug.log('Failed to extract any NAL units from video data:', left);
             this.dispatch('outOfData');
             return false;
         }
@@ -80,6 +88,8 @@ export class H265Remuxer extends BaseRemuxer {
 
         for (let nalu of nalus) {
             let unit = new NALU265(nalu);
+            
+            if (!this.parseNAL(unit)) continue;
 
             // frame boundary detection
             if (units.length && vcl && (unit.isFirstSlice || !unit.isVCL)) {
@@ -139,18 +149,11 @@ export class H265Remuxer extends BaseRemuxer {
 
     remux(frames) {
         for (let frame of frames) {
-            let units = [];
-            let size = 0;
-            for (let unit of frame.units) {
-                if (this.parseNAL(unit)) {
-                    units.push(unit);
-                    size += unit.getSize();
-                }
-            }
-            if (units.length > 0 && this.readyToDecode) {
+            let size = frame.units.reduce((acc, cur) => acc + cur.getSize(), 0);
+            if (frame.units.length > 0 && this.readyToDecode) {
                 this.mp4track.len += size;
                 this.samples.push({
-                    units: units,
+                    units: frame.units,
                     size: size,
                     keyFrame: frame.keyFrame,
                     duration: frame.duration,
@@ -217,9 +220,12 @@ export class H265Remuxer extends BaseRemuxer {
         this.mp4track.width = config.width;
         this.mp4track.height = config.height;
 
-        this.mp4track.codec = `hvc1.${config.profile_idc}.${config.profile_compatibility_flags.toString(16)}`
-            + `.L${config.level_idc}${config.tier_flag ? 'H' : 'L'}`
-            + `.${config.constraint_indicator_flags.map(b => b.toString(16)).join('.').toUpperCase()}`;
+        this.mp4track.codec = 'hvc1'
+            + '.' + (config.profile_space ? String.fromCharCode(64 + config.profile_space) : '') // Map [0,1,2,3] to ['','A','B','C']
+            + config.profile_idc
+            + '.' + reverseBits(config.profile_compatibility_flags).toString(16)
+            + '.' + (config.tier_flag ? 'H' : 'L') + config.level_idc
+            + '.' + removeTrailingDotZero(config.constraint_indicator_flags.map(function (b) { return b.toString(16); }).join('.').toUpperCase());
 
         this.mp4track.hvcC = {
             profile_space: config.profile_space,

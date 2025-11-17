@@ -123,7 +123,7 @@ export default class RemuxController extends Event {
         let remux = false;
         
         if (data.video && this.tracks.video) {
-            remux |= this.tracks.video.feed(data.video, data.duration, data.compositionTimeOffset);
+            remux |= this.tracks.video.feed(data.video, data.duration, data.compositionTimeOffset, data.isLastVideoFrameComplete);
         }
         if (data.audio && this.tracks.audio) {
             remux |= this.tracks.audio.feed(data.audio, data.duration);
