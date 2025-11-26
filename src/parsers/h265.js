@@ -119,6 +119,96 @@ export class H265Parser {
             conf_win_bottom_offset = decoder.readUEG();
         }
 
+        const bit_depth_luma_minus8 = decoder.readUEG();
+        const bit_depth_chroma_minus8 = decoder.readUEG();
+
+        const log2_max_pic_order_cnt_lsb_minus4 = decoder.readUEG();
+
+        const ordering_flag = decoder.readBits(1); // sps_sub_layer_ordering_info_present_flag
+
+        for (let i = (ordering_flag ? 0 : sps_max_sub_layers_minus1); i <= sps_max_sub_layers_minus1; i++) {
+            const max_dec = decoder.readUEG();
+            const max_num = decoder.readUEG();
+            const max_latency = decoder.readUEG();
+        }
+
+        decoder.readUEG(); // log2_min_luma_coding_block_size_minus3
+        decoder.readUEG(); // log2_diff_max_min_luma_coding_block_size
+        decoder.readUEG(); // log2_min_luma_transform_block_size_minus2
+        decoder.readUEG(); // log2_diff_max_min_luma_transform_block_size
+        decoder.readUEG(); // max_transform_hierarchy_depth_inter
+        decoder.readUEG(); // max_transform_hierarchy_depth_intra
+
+        const scaling_list_enabled_flag = decoder.readBits(1);
+        if (scaling_list_enabled_flag) {
+            const sps_scaling_list_data_present_flag = decoder.readBits(1);
+            if (sps_scaling_list_data_present_flag) {
+                // inline skipScalingListH265
+                for (let sizeId = 0; sizeId < 4; sizeId++) {
+                    for (let matrixId = 0; matrixId < (sizeId === 3 ? 2 : 6); matrixId++) {
+                        const flag = decoder.readBits(1);
+                        if (!flag) {
+                            decoder.readUEG(); // scaling_list_pred_matrix_id_delta
+                        } else {
+                            const coefNum = Math.min(64, 1 << (4 + (sizeId << 1)));
+                            if (sizeId > 1) decoder.readEG(); // scaling_list_dc_coef_minus8
+                            for (let k = 0; k < coefNum; k++) decoder.readEG();
+                        }
+                    }
+                }
+            }
+        }
+
+        const amp_enabled_flag = decoder.readBits(1);
+        const sample_adaptive_offset_enabled_flag = decoder.readBits(1);
+
+        const pcm_enabled_flag = decoder.readBits(1);
+        if (pcm_enabled_flag) {
+            decoder.readBits(4); // pcm_sample_bit_depth_luma_minus1
+            decoder.readBits(4); // pcm_sample_bit_depth_chroma_minus1
+            decoder.readUEG(); // log2_min_pcm_luma_coding_block_size_minus3
+            decoder.readUEG(); // log2_diff_max_min_pcm_luma_coding_block_size
+            decoder.readBits(1); // pcm_loop_filter_disabled_flag
+        }
+
+        const num_short_term_ref_pic_sets = decoder.readUEG();
+        // inline simplified short-term RPS parsing
+        for (let stIdx = 0; stIdx < num_short_term_ref_pic_sets; stIdx++) {
+            let inter_ref_pic_set_prediction_flag = false;
+            if (stIdx !== 0) {
+                inter_ref_pic_set_prediction_flag = decoder.readBoolean();
+            }
+            if (inter_ref_pic_set_prediction_flag) {
+                decoder.readUEG(); // delta_idx_minus1 or related
+                decoder.readBits(1); // delta_rps_sign
+                decoder.readUEG(); // abs_delta_rps_minus1
+                // fine-grained details omitted for brevity
+            } else {
+                const num_negative_pics = decoder.readUEG();
+                const num_positive_pics = decoder.readUEG();
+                for (let i = 0; i < num_negative_pics; i++) {
+                    decoder.readUEG(); // delta_poc_s0_minus1[i]
+                    decoder.readBits(1); // used_by_curr_pic_s0_flag[i]
+                }
+                for (let i = 0; i < num_positive_pics; i++) {
+                    decoder.readUEG(); // delta_poc_s1_minus1[i]
+                    decoder.readBits(1); // used_by_curr_pic_s1_flag[i]
+                }
+            }
+        }
+
+        const long_term_ref_pics_present_flag = decoder.readBits(1);
+        if (long_term_ref_pics_present_flag) {
+            const num_long_term_ref_pics_sps = decoder.readUEG();
+            for (let i = 0; i < num_long_term_ref_pics_sps; i++) {
+                decoder.readUEG(); // lt_ref_pic_poc_lsb_sps[i]
+                decoder.readBits(1); // used_by_curr_pic_lt_sps_flag[i]
+            }
+        }
+
+        const sps_temporal_mvp_enabled_flag = decoder.readBits(1);
+        const strong_intra_smoothing_enabled_flag = decoder.readBits(1);
+
         let fps = null;
         let vui_parameters_present_flag = decoder.readBoolean();
         if (vui_parameters_present_flag) {
@@ -154,15 +244,111 @@ export class H265Parser {
             decoder.readBoolean(); // field_seq_flag
             decoder.readBoolean(); // frame_field_info_present_flag
 
-            // Timing info
-            let timing_info_present_flag = decoder.readBoolean();
-            if (timing_info_present_flag) {
-                let num_units_in_tick = decoder.readUInt();
-                let time_scale = decoder.readUInt();
-                decoder.readBoolean(); // poc_proportional_to_timing_flag
-                if (num_units_in_tick) {
-                    fps = time_scale / (2 * num_units_in_tick);
+            let default_display_window_flag = decoder.readBoolean();
+            if (default_display_window_flag) {
+                decoder.readUEG(); // def_disp_win_left_offset
+                decoder.readUEG(); // def_disp_win_right_offset
+                decoder.readUEG(); // def_disp_win_top_offset
+                decoder.readUEG(); // def_disp_win_bottom_offset
+            }
+
+            let vui_timing_info_present_flag = decoder.readBoolean();
+            if (vui_timing_info_present_flag) {
+                let vui_num_units_in_tick = decoder.readUInt();
+                let vui_time_scale = decoder.readUInt();
+                const vui_poc_proportional_to_timing_flag = decoder.readBoolean();
+                if (vui_poc_proportional_to_timing_flag) {
+                    decoder.readUEG(); // vui_num_ticks_poc_diff_one_minus1
                 }
+
+                const vui_hrd_parameters_present_flag = decoder.readBoolean();
+                if (vui_hrd_parameters_present_flag) {
+                    // inline simplified HRD parsing
+                    const commonInfPresentFlag = true;
+                    let nal_hrd_parameters_present_flag = false;
+                    let vcl_hrd_parameters_present_flag = false;
+                    let sub_pic_hrd_params_present_flag = false;
+
+                    if (commonInfPresentFlag) {
+                        nal_hrd_parameters_present_flag = decoder.readBoolean();
+                        vcl_hrd_parameters_present_flag = decoder.readBoolean();
+                        if (nal_hrd_parameters_present_flag || vcl_hrd_parameters_present_flag) {
+                            sub_pic_hrd_params_present_flag = decoder.readBoolean();
+                            if (sub_pic_hrd_params_present_flag) {
+                                decoder.readBits(8); // tick_divisor_minus2
+                                decoder.readBits(5); // du_cpb_removal_delay_increment_length_minus1
+                                decoder.readBits(1); // sub_pic_cpb_params_in_pic_timing_sei_flag
+                                decoder.readBits(5); // dpb_output_delay_du_length_minus1
+                            }
+                            decoder.readBits(4); // bit_rate_scale
+                            decoder.readBits(4); // cpb_size_scale
+                            if (sub_pic_hrd_params_present_flag) {
+                                decoder.readBits(4); // cpb_size_du_scale
+                            }
+                            decoder.readBits(5); // initial_cpb_removal_delay_length_minus1
+                            decoder.readBits(5); // au_cpb_removal_delay_length_minus1
+                            decoder.readBits(5); // dpb_output_delay_length_minus1
+                        }
+                    }
+
+                    for (let i = 0; i <= sps_max_sub_layers_minus1; i++) {
+                        const fixed_pic_rate_general_flag = decoder.readBoolean();
+                        let fixed_pic_rate_within_cvs_flag = false;
+                        let low_delay_hrd_flag = false;
+                        let cpb_cnt_minus1 = 0;
+                        if (!fixed_pic_rate_general_flag) {
+                            fixed_pic_rate_within_cvs_flag = decoder.readBoolean();
+                        } else {
+                            fixed_pic_rate_within_cvs_flag = true;
+                        }
+                        if (fixed_pic_rate_within_cvs_flag) {
+                            decoder.readUEG(); // elemental_duration_in_tc_minus1
+                        } else {
+                            low_delay_hrd_flag = decoder.readBoolean();
+                        }
+                        if (!low_delay_hrd_flag) {
+                            cpb_cnt_minus1 = decoder.readUEG();
+                        }
+                        if (nal_hrd_parameters_present_flag) {
+                            for (let j = 0; j <= cpb_cnt_minus1; j++) {
+                                decoder.readUEG(); // bit_rate_value_minus1
+                                decoder.readUEG(); // cpb_size_value_minus1
+                                if (sub_pic_hrd_params_present_flag) {
+                                    decoder.readUEG(); // cpb_size_du_value_minus1
+                                    decoder.readUEG(); // bit_rate_du_value_minus1
+                                }
+                                decoder.readBits(1); // cbr_flag
+                            }
+                        }
+                        if (vcl_hrd_parameters_present_flag) {
+                            for (let j = 0; j <= cpb_cnt_minus1; j++) {
+                                decoder.readUEG(); // bit_rate_value_minus1
+                                decoder.readUEG(); // cpb_size_value_minus1
+                                if (sub_pic_hrd_params_present_flag) {
+                                    decoder.readUEG(); // cpb_size_du_value_minus1
+                                    decoder.readUEG(); // bit_rate_du_value_minus1
+                                }
+                                decoder.readBits(1); // cbr_flag
+                            }
+                        }
+                    }
+                }
+
+                if (vui_num_units_in_tick > 0 && vui_time_scale > 0) {
+                    fps = vui_time_scale / vui_num_units_in_tick;
+                }
+            }
+
+            const bitstream_restriction_flag = decoder.readBoolean();
+            if (bitstream_restriction_flag) {
+                decoder.readBoolean(); // tiles_fixed_structure_flag
+                decoder.readBoolean(); // motion_vectors_over_pic_boundaries_flag
+                decoder.readBoolean(); // restricted_ref_pic_lists_flag
+                decoder.readUEG(); // min_spatial_segmentation_idc
+                decoder.readUEG(); // max_bytes_per_pic_denom
+                decoder.readUEG(); // max_bits_per_min_cu_denom
+                decoder.readUEG(); // log2_max_mv_length_horizontal
+                decoder.readUEG(); // log2_max_mv_length_vertical
             }
         }
 
