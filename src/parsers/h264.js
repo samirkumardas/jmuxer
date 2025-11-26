@@ -221,9 +221,11 @@ export class H264Parser {
                 let fixedFrameRate = decoder.readBoolean();
                 let frameDuration = timeScale / (2 * unitsInTick);
 
-                if (fixedFrameRate) {
-                    fps = frameDuration;
-                }
+                // if (fixedFrameRate) {
+                //     fps = frameDuration;
+                // }
+                // Return the fps value even if fixedFrameRate is not set
+                fps = frameDuration;
             }
         }
         return {
