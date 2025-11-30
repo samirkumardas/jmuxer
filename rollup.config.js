@@ -11,6 +11,7 @@ export default {
             format: 'umd',
             name: 'JMuxer',
             sourcemap: false, // 'inline'
+            plugins: [terser()],
             globals: {
                 stream: 'stream',
                 fs: 'fs'
@@ -18,6 +19,17 @@ export default {
         },
         {
             file: 'dist/jmuxer.min.js',
+            format: 'umd',
+            name: 'JMuxer',
+            sourcemap: false,
+            plugins: [terser()],
+            globals: {
+                stream: 'stream',
+                fs: 'fs'
+            }
+        },
+        {
+            file: 'dist/jmuxer.js',
             format: 'umd',
             name: 'JMuxer',
             sourcemap: false,
@@ -44,7 +56,6 @@ export default {
             preventAssignment: true,
             ENV: JSON.stringify(process.env.NODE_ENV || 'development'),
         }),
-        (process.env.NODE_ENV === 'production' && terser()),
     ],
     external: [ 'stream', 'fs' ],
 };
