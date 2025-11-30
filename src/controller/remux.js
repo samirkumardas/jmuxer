@@ -37,7 +37,7 @@ export default class RemuxController extends Event {
         if (type === 'audio' || type === 'both') {
             const aacRemuxer = new AACRemuxer(this.timescale, this.mediaDuration, this.frameDuration);
             this.tracks.audio = aacRemuxer;
-            this.tracks.video.on('outOfData', () => {
+            this.tracks.audio.on('outOfData', () => {
                 this.dispatch('missingAudioFrames');
             });
         }

@@ -83,7 +83,7 @@ export class H265Parser {
         decoder.readUByte();
 
         decoder.readBits(4); // sps_video_parameter_set_id
-        decoder.readBits(3); // sps_max_sub_layers_minus1
+        const sps_max_sub_layers_minus1 = decoder.readBits(3); // sps_max_sub_layers_minus1
         decoder.readBits(1); // sps_temporal_id_nesting_flag
 
         // --- profile_tier_level() ---
