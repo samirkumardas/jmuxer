@@ -3564,7 +3564,7 @@
         URL.revokeObjectURL(this.url);
         // this.createBuffer();
         if (typeof this.options.onReady === 'function') {
-          this.options.onReady.call(null, this.isReset);
+          this.options.onReady.call(null, this.isReset, this.mediaSource);
         }
       }
     }, {
