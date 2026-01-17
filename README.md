@@ -8,9 +8,9 @@ jMuxer - a simple javascript mp4 muxer that works in both browser and node envir
 
 Live Demo
 -------
-[Click here](https://samirkumardas.github.io/jmuxer/) to view a working demo
+[Click here](https://webstream-labs.github.io/jmuxer/) to view a working demo
 
-[Click here](https://samirkumardas.github.io/jmuxer/h264_player.html) to play a h264 file online
+[Click here](https://webstream-labs.github.io/jmuxer/h264_player.html) to play a h264 file online
 
 How to use?
 -------
